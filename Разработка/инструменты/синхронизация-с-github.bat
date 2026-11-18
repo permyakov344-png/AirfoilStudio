@@ -30,7 +30,8 @@ rem --- 1. сохранить изменения ---
 git add -A
 git diff --cached --quiet
 if errorlevel 1 (
-  git commit -q -m "Автосохранение %DATE% %TIME%"
+  for /f "tokens=1 delims=,." %%t in ("%TIME%") do set "NOW=%%t"
+  git commit -q -m "Автосохранение %DATE% %NOW%"
   if errorlevel 1 goto err
   echo [1/3] Коммит создан.
 ) else (
