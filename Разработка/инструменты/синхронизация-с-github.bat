@@ -27,10 +27,12 @@ if errorlevel 1 (
 )
 
 rem --- 1. сохранить изменения ---
+rem метку времени считаем ДО блока if: внутри скобок %NOW% уже не обновится
+for /f "tokens=1 delims=,." %%t in ("%TIME%") do set "NOW=%%t"
+
 git add -A
 git diff --cached --quiet
 if errorlevel 1 (
-  for /f "tokens=1 delims=,." %%t in ("%TIME%") do set "NOW=%%t"
   git commit -q -m "Автосохранение %DATE% %NOW%"
   if errorlevel 1 goto err
   echo [1/3] Коммит создан.
