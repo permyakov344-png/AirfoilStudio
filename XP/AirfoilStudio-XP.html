@@ -1324,9 +1324,13 @@ function splitHalves(pts) {
   for (var i = 1; i < pts.length; i++) {
     if (pts[i][0] < pts[le][0] - 1e-12 || Math.abs(pts[i][0] - pts[le][0]) < 1e-12 && Math.abs(pts[i][1]) < Math.abs(pts[le][1])) le = i;
   }
+  // Плоский торец (вертикальная кромка в CAD): точки ПК сверху и снизу стоят
+  // на одном x — низ начинаем со второй, иначе толщина на ПК схлопывается в 0.
+  var k = le;
+  if (pts.length > le + 1 && Math.abs(pts[le + 1][0] - pts[le][0]) < 1e-9) k = le + 1;
   return {
     upper: pts.slice(0, le + 1),
-    lower: pts.slice(le),
+    lower: pts.slice(k),
     le
   };
 }
@@ -7174,11 +7178,116 @@ function parseStep(text) {
 }
 
 /* Контур из файла → точки профиля в долях хорды, ПК в x=0, y ПК = 0. */
+/* Контур из файла CAD в профиль: не «самая правая точка», а верхняя и нижняя
+   кромки на каждой станции X (как их видит станок). Годится для любой детали:
+   крыло, пластина со скруглениями, «кирпич». */
+function profileFromCad(raw) {
+  var pts = (raw || []).filter(p => Array.isArray(p) && isFinite(p[0]) && isFinite(p[1]));
+  if (pts.length < 4) return null;
+  var cl = [];
+  var _iterator31 = _createForOfIteratorHelper(pts),
+    _step31;
+  try {
+    for (_iterator31.s(); !(_step31 = _iterator31.n()).done;) {
+      var _q5 = _step31.value;
+      if (!cl.length || Math.hypot(_q5[0] - cl[cl.length - 1][0], _q5[1] - cl[cl.length - 1][1]) > 1e-9) cl.push(_q5);
+    }
+  } catch (err) {
+    _iterator31.e(err);
+  } finally {
+    _iterator31.f();
+  }
+  if (cl.length > 3 && Math.hypot(cl[0][0] - cl[cl.length - 1][0], cl[0][1] - cl[cl.length - 1][1]) <= 1e-9) cl.pop();
+  pts = cl;
+  if (pts.length < 4) return null;
+  var xmin = Infinity,
+    xmax = -Infinity;
+  var _iterator32 = _createForOfIteratorHelper(pts),
+    _step32;
+  try {
+    for (_iterator32.s(); !(_step32 = _iterator32.n()).done;) {
+      var _q6 = _step32.value;
+      if (_q6[0] < xmin) xmin = _q6[0];
+      if (_q6[0] > xmax) xmax = _q6[0];
+    }
+  } catch (err) {
+    _iterator32.e(err);
+  } finally {
+    _iterator32.f();
+  }
+  var chord = xmax - xmin;
+  if (!(chord > 1e-9)) return null;
+  var eps = chord * 1e-7;
+  var xs = pts.map(q => q[0]).sort((a, b) => a - b);
+  var uniq = [];
+  var _iterator33 = _createForOfIteratorHelper(xs),
+    _step33;
+  try {
+    for (_iterator33.s(); !(_step33 = _iterator33.n()).done;) {
+      var _x5 = _step33.value;
+      if (!uniq.length || _x5 - uniq[uniq.length - 1] > eps) uniq.push(_x5);
+    }
+
+    /* верх и низ обвода на станции x: вертикальный луч по всем отрезкам */
+  } catch (err) {
+    _iterator33.e(err);
+  } finally {
+    _iterator33.f();
+  }
+  function edgeY(x) {
+    var up = -Infinity,
+      lo = Infinity;
+    for (var i = 0; i < pts.length; i++) {
+      var a = pts[i],
+        b = pts[(i + 1) % pts.length];
+      if (Math.abs(a[0] - b[0]) <= eps) {
+        // вертикальный отрезок
+        if (Math.abs(a[0] - x) <= eps) {
+          var hi = Math.max(a[1], b[1]),
+            lw = Math.min(a[1], b[1]);
+          if (hi > up) up = hi;
+          if (lw < lo) lo = lw;
+        }
+        continue;
+      }
+      var x0 = Math.min(a[0], b[0]),
+        x1 = Math.max(a[0], b[0]);
+      if (x < x0 - eps || x > x1 + eps) continue;
+      var y = a[1] + (b[1] - a[1]) * (x - a[0]) / (b[0] - a[0]);
+      if (y > up) up = y;
+      if (y < lo) lo = y;
+    }
+    return up > -Infinity ? [up, lo] : null;
+  }
+  var up = [],
+    lo = [];
+  for (var _i33 = 0, _uniq = uniq; _i33 < _uniq.length; _i33++) {
+    var x = _uniq[_i33];
+    var r = edgeY(x);
+    if (!r) continue;
+    up.push([x, r[0]]);
+    lo.push([x, r[1]]);
+  }
+  if (up.length < 2) return null;
+  var y0 = (up[0][1] + lo[0][1]) / 2; // передняя кромка — середина торца
+  var out = [];
+  for (var i = up.length - 1; i >= 0; i--) out.push([(up[i][0] - xmin) / chord, (up[i][1] - y0) / chord]);
+  for (var _i34 = 0; _i34 < lo.length; _i34++) {
+    var q = [(lo[_i34][0] - xmin) / chord, (lo[_i34][1] - y0) / chord];
+    var prev = out[out.length - 1];
+    // плоский торец: верх и низ кромки стоят на одном x — обе точки нужны,
+    // иначе толщина на торце схлопывается в ноль и контур получает «клюв»
+    if (Math.hypot(q[0] - prev[0], q[1] - prev[1]) > 1e-9) out.push(q);
+  }
+  return out;
+}
+
+/* Профиль из CAD: станции по X, верх и низ — как их видит станок. */
+
 function normalizeImported(raw) {
-  var pts = canonicalize(raw || []);
+  var pts = profileFromCad(raw);
   if (!pts) return null;
-  // хорда горизонтально: угол сохраняется, форма не меняется
-  return alignChord(pts) || pts;
+  return pts; // станции уже стоят по X: доворот не нужен и только портит форму
 }
 
 /* Экспорт профиля из редактора: спрашивает, куда и под каким именем. */
@@ -7223,18 +7332,18 @@ function ribContourMM(prof, chord) {
   var pts = smoothOutline(prof && prof.pts).map(([x, y]) => [x * chord, y * chord]);
   var ymin = Infinity,
     ymax = -Infinity;
-  var _iterator31 = _createForOfIteratorHelper(pts),
-    _step31;
+  var _iterator34 = _createForOfIteratorHelper(pts),
+    _step34;
   try {
-    for (_iterator31.s(); !(_step31 = _iterator31.n()).done;) {
-      var p = _step31.value;
+    for (_iterator34.s(); !(_step34 = _iterator34.n()).done;) {
+      var p = _step34.value;
       if (p[1] < ymin) ymin = p[1];
       if (p[1] > ymax) ymax = p[1];
     }
   } catch (err) {
-    _iterator31.e(err);
+    _iterator34.e(err);
   } finally {
-    _iterator31.f();
+    _iterator34.f();
   }
   return {
     pts,
@@ -7253,11 +7362,11 @@ function ribY(prof, upper, fx, chord) {
    и привязка к обводу берутся те же, что уходят в рез. */
 function ribCutoutsMM(endKey, prof, chord) {
   var out = [];
-  var _iterator32 = _createForOfIteratorHelper(sparDefsResolved()),
-    _step32;
+  var _iterator35 = _createForOfIteratorHelper(sparDefsResolved()),
+    _step35;
   try {
-    for (_iterator32.s(); !(_step32 = _iterator32.n()).done;) {
-      var def = _step32.value;
+    for (_iterator35.s(); !(_step35 = _iterator35.n()).done;) {
+      var def = _step35.value;
       var src = def[endKey] && typeof def[endKey] === "object" ? def[endKey] : {
         x: 0.3 * chord,
         y: 0
@@ -7292,7 +7401,7 @@ function ribCutoutsMM(endKey, prof, chord) {
         // устье — по самому обводу: дуга между стенками
         var _n = 24,
           arc = [];
-        for (var _i33 = 0; _i33 <= _n; _i33++) arc.push([clamp(x1 + (x2 - x1) * _i33 / _n, 0, chord), ribY(prof, up, (x1 + (x2 - x1) * _i33 / _n) / Math.max(1, chord), chord)]);
+        for (var _i35 = 0; _i35 <= _n; _i35++) arc.push([clamp(x1 + (x2 - x1) * _i35 / _n, 0, chord), ribY(prof, up, (x1 + (x2 - x1) * _i35 / _n) / Math.max(1, chord), chord)]);
         out.push({
           kind: "poly",
           yc,
@@ -7311,9 +7420,9 @@ function ribCutoutsMM(endKey, prof, chord) {
       }
     }
   } catch (err) {
-    _iterator32.e(err);
+    _iterator35.e(err);
   } finally {
-    _iterator32.f();
+    _iterator35.f();
   }
   return out;
 }
@@ -7389,8 +7498,8 @@ function ribSheetCanvas(e) {
   ctx.lineTo(X(0), Y(0) - 2.2 * P);
   ctx.moveTo(X(e.chord), Y(0));
   ctx.lineTo(X(e.chord), Y(0) - 2.2 * P);
-  for (var _i34 = 0, _arr11 = [0.25, 0.5, 0.75]; _i34 < _arr11.length; _i34++) {
-    var fr = _arr11[_i34];
+  for (var _i36 = 0, _arr11 = [0.25, 0.5, 0.75]; _i36 < _arr11.length; _i36++) {
+    var fr = _arr11[_i36];
     var xx = X(e.chord * fr);
     ctx.moveTo(xx, Y(0) - 2 * P);
     ctx.lineTo(xx, Y(0) + 2 * P);
@@ -7401,27 +7510,27 @@ function ribSheetCanvas(e) {
   ctx.font = Math.round(2.6 * P) + 'px "Segoe UI", Arial';
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
-  for (var _i35 = 0, _arr12 = [0.25, 0.5, 0.75]; _i35 < _arr12.length; _i35++) {
-    var _fr = _arr12[_i35];
+  for (var _i37 = 0, _arr12 = [0.25, 0.5, 0.75]; _i37 < _arr12.length; _i37++) {
+    var _fr = _arr12[_i37];
     ctx.fillText(String(_fr * 100), X(e.chord * _fr), Y(0) + 5.2 * P);
   }
 
   // вырезы лонжерона: штрихом, без подписей и размеров
   ctx.strokeStyle = "#111";
   ctx.lineWidth = 0.5 * P;
-  var _iterator33 = _createForOfIteratorHelper(cut),
-    _step33;
+  var _iterator36 = _createForOfIteratorHelper(cut),
+    _step36;
   try {
-    for (_iterator33.s(); !(_step33 = _iterator33.n()).done;) {
-      var c = _step33.value;
+    for (_iterator36.s(); !(_step36 = _iterator36.n()).done;) {
+      var c = _step36.value;
       dashPath(ctx, c.pts.map(p => [X(p[0]), Y(p[1])]), 2.6 * P, 1.4 * P, true);
     }
 
     // линейка 100 мм с шагом 10 — проверка масштаба после печати
   } catch (err) {
-    _iterator33.e(err);
+    _iterator36.e(err);
   } finally {
-    _iterator33.f();
+    _iterator36.f();
   }
   var barY = (topZone + ribH + 14) * P,
     barX = X(0),
@@ -7491,8 +7600,8 @@ function ribA4Pages(sheet, e) {
     }
   }
   var pages = [];
-  for (var _i36 = 0; _i36 < M; _i36++) {
-    var xS = _i36 * (printW - PDF_JOINT);
+  for (var _i38 = 0; _i38 < M; _i38++) {
+    var xS = _i38 * (printW - PDF_JOINT);
     var cv = document.createElement("canvas");
     cv.width = pW * P;
     cv.height = pH * P;
@@ -7507,7 +7616,7 @@ function ribA4Pages(sheet, e) {
     pc.textAlign = "left";
     pc.textBaseline = "alphabetic";
     pc.font = "600 " + Math.round(3.6 * P) + 'px "Segoe UI", Arial';
-    pc.fillText(e.title + " · " + (e.prof && e.prof.name || "—") + " · хорда " + Math.round(e.chord) + " мм" + (M > 1 ? " · лист " + (_i36 + 1) + " из " + M : ""), PDF_PAD * P, 10 * P);
+    pc.fillText(e.title + " · " + (e.prof && e.prof.name || "—") + " · хорда " + Math.round(e.chord) + " мм" + (M > 1 ? " · лист " + (_i38 + 1) + " из " + M : ""), PDF_PAD * P, 10 * P);
     // строка внизу листа
     pc.fillStyle = "#444";
     pc.font = Math.round(2.6 * P) + 'px "Segoe UI", Arial';
@@ -7592,8 +7701,8 @@ function ribPdf() {
     title: "КОНЦЕВАЯ НЕРВЮРА"
   }];
   var pages = [];
-  for (var _i37 = 0, _ends = ends; _i37 < _ends.length; _i37++) {
-    var e = _ends[_i37];
+  for (var _i39 = 0, _ends = ends; _i39 < _ends.length; _i39++) {
+    var e = _ends[_i39];
     ribA4Pages(ribSheetCanvas(e), e).forEach(p => pages.push(p));
   }
   var nm = ((rp.name === tp.name ? rp.name : rp.name + " - " + tp.name) || "профиль").replace(/[\\/:*?"<>|]+/g, "-").trim();
@@ -7934,23 +8043,23 @@ function init() {
   })();
   $("#pSeed").onclick = () => {
     var n = 0;
-    var _iterator34 = _createForOfIteratorHelper(seedProfiles()),
-      _step34;
+    var _iterator37 = _createForOfIteratorHelper(seedProfiles()),
+      _step37;
     try {
       var _loop1 = function _loop1() {
-        var sp = _step34.value;
+        var sp = _step37.value;
         if (!S.profiles.some(p => p.name === sp.name)) {
           S.profiles.push(sp);
           n++;
         }
       };
-      for (_iterator34.s(); !(_step34 = _iterator34.n()).done;) {
+      for (_iterator37.s(); !(_step37 = _iterator37.n()).done;) {
         _loop1();
       }
     } catch (err) {
-      _iterator34.e(err);
+      _iterator37.e(err);
     } finally {
-      _iterator34.f();
+      _iterator37.f();
     }
     saveProfiles();
     renderProfileList();
@@ -8753,21 +8862,21 @@ function fromCode() {
   $("#gMake").click();
 }
 function importFiles(files) {
-  var ok, bad, list, _iterator35, _step35, f, txt, base, p, raw, pts, ch, _raw, _pts, _ch, q, _t16, _t17;
+  var ok, bad, list, _iterator38, _step38, f, txt, base, p, raw, pts, ch, _raw, _pts, _ch, q, _t16, _t17;
   return _regeneratorAsync(function (_context1) {
     while (1) switch (_context1.p = _context1.n) {
       case 0:
         ok = 0, bad = 0;
         list = Array.from(files).filter(f => /\.(dat|txt|csv|dxf|step|stp)$/i.test(f.name));
-        _iterator35 = _createForOfIteratorHelper(list);
+        _iterator38 = _createForOfIteratorHelper(list);
         _context1.p = 1;
-        _iterator35.s();
+        _iterator38.s();
       case 2:
-        if ((_step35 = _iterator35.n()).done) {
+        if ((_step38 = _iterator38.n()).done) {
           _context1.n = 7;
           break;
         }
-        f = _step35.value;
+        f = _step38.value;
         _context1.p = 3;
         _context1.n = 4;
         return _awaitAsyncGenerator(_blobText(f));
@@ -8825,10 +8934,10 @@ function importFiles(files) {
       case 8:
         _context1.p = 8;
         _t17 = _context1.v;
-        _iterator35.e(_t17);
+        _iterator38.e(_t17);
       case 9:
         _context1.p = 9;
-        _iterator35.f();
+        _iterator38.f();
         return _context1.f(9);
       case 10:
         renderProfileList();

@@ -1116,7 +1116,11 @@ function splitHalves(pts){
     if(pts[i][0] < pts[le][0] - 1e-12 ||
        (Math.abs(pts[i][0]-pts[le][0]) < 1e-12 && Math.abs(pts[i][1]) < Math.abs(pts[le][1]))) le = i;
   }
-  return { upper: pts.slice(0, le+1), lower: pts.slice(le), le };
+  // Плоский торец (вертикальная кромка в CAD): точки ПК сверху и снизу стоят
+  // на одном x — низ начинаем со второй, иначе толщина на ПК схлопывается в 0.
+  let k = le;
+  if(pts.length > le + 1 && Math.abs(pts[le+1][0] - pts[le][0]) < 1e-9) k = le + 1;
+  return { upper: pts.slice(0, le+1), lower: pts.slice(k), le };
 }
 
 function catmullDense(pts, per){
@@ -5732,11 +5736,74 @@ function parseStep(text){
 }
 
 /* Контур из файла → точки профиля в долях хорды, ПК в x=0, y ПК = 0. */
+/* Контур из файла CAD в профиль: не «самая правая точка», а верхняя и нижняя
+   кромки на каждой станции X (как их видит станок). Годится для любой детали:
+   крыло, пластина со скруглениями, «кирпич». */
+function profileFromCad(raw){
+  let pts = (raw || []).filter(p => Array.isArray(p) && isFinite(p[0]) && isFinite(p[1]));
+  if(pts.length < 4) return null;
+  const cl = [];
+  for(const q of pts)
+    if(!cl.length || Math.hypot(q[0]-cl[cl.length-1][0], q[1]-cl[cl.length-1][1]) > 1e-9) cl.push(q);
+  if(cl.length > 3 && Math.hypot(cl[0][0]-cl[cl.length-1][0], cl[0][1]-cl[cl.length-1][1]) <= 1e-9) cl.pop();
+  pts = cl;
+  if(pts.length < 4) return null;
+
+  let xmin = Infinity, xmax = -Infinity;
+  for(const q of pts){ if(q[0] < xmin) xmin = q[0]; if(q[0] > xmax) xmax = q[0]; }
+  const chord = xmax - xmin;
+  if(!(chord > 1e-9)) return null;
+  const eps = chord * 1e-7;
+
+  const xs = pts.map(q => q[0]).sort((a, b) => a - b);
+  const uniq = [];
+  for(const x of xs) if(!uniq.length || x - uniq[uniq.length-1] > eps) uniq.push(x);
+
+  /* верх и низ обвода на станции x: вертикальный луч по всем отрезкам */
+  function edgeY(x){
+    let up = -Infinity, lo = Infinity;
+    for(let i = 0; i < pts.length; i++){
+      const a = pts[i], b = pts[(i+1) % pts.length];
+      if(Math.abs(a[0]-b[0]) <= eps){        // вертикальный отрезок
+        if(Math.abs(a[0]-x) <= eps){
+          const hi = Math.max(a[1], b[1]), lw = Math.min(a[1], b[1]);
+          if(hi > up) up = hi;
+          if(lw < lo) lo = lw;
+        }
+        continue;
+      }
+      const x0 = Math.min(a[0], b[0]), x1 = Math.max(a[0], b[0]);
+      if(x < x0 - eps || x > x1 + eps) continue;
+      const y = a[1] + (b[1]-a[1]) * (x - a[0]) / (b[0] - a[0]);
+      if(y > up) up = y;
+      if(y < lo) lo = y;
+    }
+    return up > -Infinity ? [up, lo] : null;
+  }
+
+  const up = [], lo = [];
+  for(const x of uniq){ const r = edgeY(x); if(!r) continue; up.push([x, r[0]]); lo.push([x, r[1]]); }
+  if(up.length < 2) return null;
+
+  const y0 = (up[0][1] + lo[0][1]) / 2;      // передняя кромка — середина торца
+  const out = [];
+  for(let i = up.length - 1; i >= 0; i--) out.push([(up[i][0]-xmin)/chord, (up[i][1]-y0)/chord]);
+  for(let i = 0; i < lo.length; i++){
+    const q = [(lo[i][0]-xmin)/chord, (lo[i][1]-y0)/chord];
+    const prev = out[out.length-1];
+    // плоский торец: верх и низ кромки стоят на одном x — обе точки нужны,
+    // иначе толщина на торце схлопывается в ноль и контур получает «клюв»
+    if(Math.hypot(q[0]-prev[0], q[1]-prev[1]) > 1e-9) out.push(q);
+  }
+  return out;
+}
+
+/* Профиль из CAD: станции по X, верх и низ — как их видит станок. */
+
 function normalizeImported(raw){
-  const pts = canonicalize(raw || []);
+  const pts = profileFromCad(raw);
   if(!pts) return null;
-  // хорда горизонтально: угол сохраняется, форма не меняется
-  return alignChord(pts) || pts;
+  return pts;          // станции уже стоят по X: доворот не нужен и только портит форму
 }
 
 /* Экспорт профиля из редактора: спрашивает, куда и под каким именем. */
