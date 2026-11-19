@@ -166,6 +166,7 @@ table.pts tr:hover td{background:#151d29}
     <button data-tab="profiles" class="act">Профили</button>
     <button data-tab="editor">Редактор</button>
     <button data-tab="cut">Пенорезка</button>
+    <button data-tab="cutdxf">Пенорезка DXF</button>
     <button data-tab="machine">Станок</button>
     <button data-tab="help">Справка</button>
   </nav>
@@ -547,6 +548,69 @@ table.pts tr:hover td{background:#151d29}
       <div class="hd">Управляющая программа <button id="cCopy" class="gh" style="margin-left:auto">Копировать</button></div>
       <textarea id="cGcode" class="txt mono" spellcheck="false" placeholder="Нажми «Сформировать УП»"></textarea>
       <div class="hint" id="cGcodeInfo">—</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ ПЕНОРЕЗКА DXF ============================ -->
+<section class="tab" id="tab-cutdxf">
+  <div class="cols">
+    <div class="panel" style="width:380px;overflow:auto">
+      <div class="hd">Пенорезка DXF <span class="pill" id="dxfPill">—</span></div>
+      <div class="hint" style="font-size:11px;line-height:1.45">Загрузи контур <b>.dxf</b> отдельно на каждую башню:
+        слева корневая нервюра (оси X,Y), справа концевая (оси A,B). Файл распознаётся так же, как импорт в «Профилих»,
+        становится профилем в базе и сразу уходит в рез.</div>
+
+      <div class="row" style="gap:4px"><b style="color:var(--acc2)">Левая башня · корневая нервюра (X,Y)</b></div>
+      <label class="fld"><b>Профиль</b><select id="dxfRootProf"></select></label>
+      <div class="row">
+        <button id="dxfRootBtn" class="pri grow1" title="Выбрать файл .dxf с контуром нервюры — он станет профилем левой башни">Загрузить DXF → левая</button>
+        <input type="file" id="dxfRootFile" accept=".dxf,application/dxf" hidden>
+      </div>
+      <div class="hint" id="dxfRootInfo" style="font-size:11px;line-height:1.45">—</div>
+
+      <div class="sep"></div>
+      <div class="row" style="gap:4px"><b style="color:var(--acc)">Правая башня · концевая нервюра (A,B)</b></div>
+      <label class="fld"><b>Профиль</b><select id="dxfTipProf"></select></label>
+      <div class="row">
+        <button id="dxfTipBtn" class="pri grow1" title="Выбрать файл .dxf с контуром нервюры — он станет профилем правой башни">Загрузить DXF → правая</button>
+        <input type="file" id="dxfTipFile" accept=".dxf,application/dxf" hidden>
+      </div>
+      <div class="hint" id="dxfTipInfo" style="font-size:11px;line-height:1.45">—</div>
+
+      <div class="sep"></div>
+      <div class="hd" style="font-size:12px">Синхронизация загруженных профилей <span class="pill" id="dxfSyncPill">—</span></div>
+      <label class="row" style="gap:6px;color:var(--dim);font-size:12px">
+        <input type="checkbox" id="dxfSync" checked> держать башни на одном контуре
+      </label>
+      <div class="hint" style="font-size:11px;line-height:1.45">Включено: что загрузил в одну башню, встаёт и в другую —
+        обе нервюры одинаковые, рез идёт прямой призмой. Выключено: башни живут отдельно (крыло с переменным профилем),
+        а кнопки ниже переносят контур из одной башни в другую.</div>
+      <div class="row">
+        <button id="dxfCopyTip" class="grow1" title="Взять контур левой башни и поставить его на правую">левая → правая</button>
+        <button id="dxfCopyRoot" class="grow1" title="Взять контур правой башни и поставить его на левую">правая → левая</button>
+      </div>
+
+      <div class="sep"></div>
+      <div class="row">
+        <button id="dxfGen" class="pri grow1">Сформировать УП</button>
+        <button id="dxfToCut">К пенорезке</button>
+      </div>
+      <div class="row">
+        <button id="dxfToEditor" class="grow1" title="Открыть контур в редакторе — там поле «Хорда профиля, мм», оно и задаёт размер реза">Хорда — в редакторе</button>
+      </div>
+      <div class="hint" style="font-size:11px;line-height:1.45">Отдельного поля хорды здесь нет: размер реза берётся из
+        записи профиля (поле «Хорда профиля, мм» в редакторе). Если DXF нарисован в реальных миллиметрах, хорда
+        записывается в профиль автоматически — по ширине контура в самом файле.</div>
+    </div>
+
+    <div class="panel grow">
+      <div class="hd">Оба торца в миллиметрах <span class="pill" id="dxfStat">—</span></div>
+      <div class="cvWrap" style="min-height:240px"><canvas id="dxfCanvas"></canvas></div>
+      <div class="hint" id="dxfInfo" style="font-size:11px;line-height:1.5">—</div>
+      <div class="hint" style="font-size:11px;line-height:1.45">Контуры наложены в натуральную величину: синяя линия —
+        левая башня (X,Y), оранжевая — правая (A,B); когда башни синхронны, они лежат друг на друге (пунктир сверху).
+        Сетка 10 мм, подписи по краям зелёные, линия y = 0 — хорда. Заготовка, лонжерон, подача и проект — в «Пенорезке».</div>
     </div>
   </div>
 </section>
@@ -4514,7 +4578,7 @@ function fillCutSelects() {
     });
     sel.value = clamp(CFG[key].idx, 0, Math.max(0, S.profiles.length - 1));
   };
-  for (var _i21 = 0, _arr6 = [["#cRootProf", "root"], ["#cTipProf", "tip"]]; _i21 < _arr6.length; _i21++) {
+  for (var _i21 = 0, _arr6 = [["#cRootProf", "root"], ["#cTipProf", "tip"], ["#dxfRootProf", "root"], ["#dxfTipProf", "tip"]]; _i21 < _arr6.length; _i21++) {
     _loop7();
   }
 }
@@ -5322,11 +5386,290 @@ function projOpen(o) {
   };
 }
 
+/* ================= вкладка «Пенорезка DXF» =================
+   Загрузка контура .dxf на каждую башню отдельно: слева корневая нервюра
+   (оси X,Y), справа концевая (оси A,B), плюс синхронизация загруженных
+   профилей. Включённая синхронизация держит обе башни на одном контуре
+   (прямая призма), выключенная — даёт резать крыло с разными нервюрами.
+   Файл разбирается тем же parseDxf, что и импорт в «Профилих», но результат
+   сразу уходит в рез, минуя список профилей. */
+
+var DXF_FILE = {
+  root: "",
+  tip: ""
+}; // имена последних загруженных файлов
+var DXF_LAST = "root"; // куда загружали последним — туда откроем редактор
+
+function dxfIdx(key) {
+  return clamp(CFG[key].idx | 0, 0, Math.max(0, S.profiles.length - 1));
+}
+function dxfSyncOn() {
+  var el = $("#dxfSync");
+  return !!(el && el.checked);
+}
+function dxfSamePts(a, b) {
+  if (!a || !b || a.length !== b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (Math.abs(a[i][0] - b[i][0]) > 1e-9 || Math.abs(a[i][1] - b[i][1]) > 1e-9) return false;
+  }
+  return true;
+}
+/* Совпадают ли контуры двух башень — это и есть результат синхронизации,
+   его видно на холсте (оранжевая линия лежит на синей). */
+function dxfSameProfile() {
+  var r = S.profiles[dxfIdx("root")],
+    t = S.profiles[dxfIdx("tip")];
+  if (!r || !t) return false;
+  return r.name === t.name && dxfSamePts(r.pts, t.pts);
+}
+/* Строка состояния одной башни: файл, профиль, точек, хорда. */
+function dxfSideInfo(key) {
+  var i = dxfIdx(key),
+    p = S.profiles[i];
+  if (!p) return "профиля нет";
+  var ch = profileChord(i, CFG[key].chord);
+  return (DXF_FILE[key] ? "файл <b>" + esc(DXF_FILE[key]) + "</b> → " : "") + "«" + esc(p.name) + "» · точек " + p.pts.length + " · хорда " + ch + " мм " + (+p.chord > 0 ? "(из записи профиля)" : "(задаётся в редакторе)");
+}
+/* Всё, что меняет профили башен: пересобрать расчёт, сбросить УП, перерисовать. */
+function dxfChanged(msg) {
+  fillCutSelects();
+  var gc = $("#cGcode");
+  if (gc) gc.value = "";
+  var gi = $("#cGcodeInfo");
+  if (gi) gi.textContent = "Параметры изменены — сформируй УП заново";
+  refreshCut();
+  saveCfg();
+  renderProfileCanvas();
+  renderDxf();
+  if (msg) toast(msg);
+}
+/* Выбор профиля на башне; при включённой синхронизации — сразу на обеих. */
+function dxfPick(key, idx) {
+  idx = clamp(idx | 0, 0, Math.max(0, S.profiles.length - 1));
+  var keys = dxfSyncOn() ? ["root", "tip"] : [key];
+  keys.forEach(k => {
+    CFG[k].idx = idx;
+    CFG[k].name = (S.profiles[idx] || {}).name || "";
+  });
+  DXF_LAST = key;
+  dxfChanged(keys.length > 1 ? "Профиль «" + ((S.profiles[idx] || {}).name || "") + "» встал на обе башни" : "");
+}
+/* Перенос контура с одной башни на другую. */
+function dxfCopy(from, to) {
+  var i = dxfIdx(from),
+    p = S.profiles[i];
+  if (!p) return toast("На башне нет профиля");
+  CFG[to].idx = i;
+  CFG[to].name = p.name;
+  DXF_FILE[to] = DXF_FILE[from] || "";
+  dxfChanged((from === "root" ? "Левая → правая" : "Правая → левая") + ": «" + p.name + "»");
+}
+/* Размер контура в самом файле, мм. DXF и STEP приходят в реальных миллиметрах,
+   поэтому ширина контура по X — это и есть хорда. Меньше 10 мм — файл без размеров
+   (единицы не миллиметры), тогда хорда остаётся та, что в записи профиля. */
+function rawChordMM(raw) {
+  if (!raw || raw.length < 4) return null;
+  var xmin = Infinity,
+    xmax = -Infinity;
+  var _iterator18 = _createForOfIteratorHelper(raw),
+    _step18;
+  try {
+    for (_iterator18.s(); !(_step18 = _iterator18.n()).done;) {
+      var q = _step18.value;
+      if (q && isFinite(q[0])) {
+        if (q[0] < xmin) xmin = q[0];
+        if (q[0] > xmax) xmax = q[0];
+      }
+    }
+  } catch (err) {
+    _iterator18.e(err);
+  } finally {
+    _iterator18.f();
+  }
+  var ch = xmax - xmin;
+  if (!isFinite(ch) || ch < 10 || ch > 20000) return null;
+  return Math.round(ch * 100) / 100;
+}
+/* Загрузка файла: разбор → профиль в базе → на башню (при синхронизации — на обе). */
+function dxfLoadTo(key) {
+  var inp, f, raw, pts, txt, base, ch, idx, i, what, _p4, p, keys, msg, _t7;
+  return _regeneratorAsync(function (_context5) {
+    while (1) switch (_context5.p = _context5.n) {
+      case 0:
+        inp = $(key === "root" ? "#dxfRootFile" : "#dxfTipFile");
+        if (inp) {
+          _context5.n = 1;
+          break;
+        }
+        return _context5.a(2);
+      case 1:
+        f = inp.files && inp.files[0];
+        if (f) {
+          _context5.n = 2;
+          break;
+        }
+        return _context5.a(2);
+      case 2:
+        raw = null, pts = null;
+        _context5.p = 3;
+        _context5.n = 4;
+        return _awaitAsyncGenerator(_blobText(f));
+      case 4:
+        txt = _context5.v;
+        // переменная обязана называться f: сборка XP подменяет это чтение
+        raw = parseDxf(txt);
+        pts = normalizeImported(raw);
+        _context5.n = 6;
+        break;
+      case 5:
+        _context5.p = 5;
+        _t7 = _context5.v;
+        pts = null;
+      case 6:
+        inp.value = "";
+        if (pts) {
+          _context5.n = 7;
+          break;
+        }
+        return _context5.a(2, toast("Не распознал контур в «" + f.name + "» — нужен DXF с полилинией (LWPOLYLINE или POLYLINE)"));
+      case 7:
+        base = f.name.replace(/\.[^.]+$/, "").trim() || "профиль";
+        ch = rawChordMM(raw); // хорда по ширине контура в файле, если файл в миллиметрах
+        idx = -1;
+        i = 0;
+      case 8:
+        if (!(i < S.profiles.length)) {
+          _context5.n = 10;
+          break;
+        }
+        if (!((S.profiles[i].name || "").trim().toLowerCase() === base.toLowerCase())) {
+          _context5.n = 9;
+          break;
+        }
+        idx = i;
+        return _context5.a(3, 10);
+      case 9:
+        i++;
+        _context5.n = 8;
+        break;
+      case 10:
+        if (idx >= 0 && dxfSamePts(S.profiles[idx].pts, pts)) {
+          // тот же контур уже в базе — дубль не плодим, но размер из файла главный
+          what = "";
+          if (ch && +S.profiles[idx].chord !== ch) {
+            S.profiles[idx].chord = ch;
+            saveProfiles();
+            what = " · хорда обновлена " + ch + " мм";
+          }
+        } else {
+          _p4 = {
+            name: uniqueProfileName(base),
+            pts,
+            src: "edit"
+          };
+          if (ch) _p4.chord = ch;
+          idx = S.profiles.length;
+          addProfile(_p4, true); // addProfile сам сохраняет базу и пересобирает списки
+          what = " · хорда " + (ch ? ch + " мм из файла" : "берётся из записи");
+        }
+        p = S.profiles[idx];
+        DXF_LAST = key;
+        keys = dxfSyncOn() ? ["root", "tip"] : [key];
+        keys.forEach(k => {
+          CFG[k].idx = idx;
+          CFG[k].name = p.name;
+          DXF_FILE[k] = f.name;
+        });
+        msg = "Загружено на " + (key === "root" ? "левую" : "правую") + " башню: «" + p.name + "»" + what;
+        if (keys.length > 1) msg += " · синхронно и на вторую башню";
+        dxfChanged(msg);
+      case 11:
+        return _context5.a(2);
+    }
+  }, null, null, [[3, 5]], Promise);
+}
+function renderDxf() {
+  var mp = $("#dxfPill");
+  if (mp) mp.textContent = "хорда " + profileChord(dxfIdx("root"), CFG.root.chord) + " → " + profileChord(dxfIdx("tip"), CFG.tip.chord) + " мм";
+  var sp = $("#dxfSyncPill");
+  if (sp) sp.textContent = dxfSyncOn() ? "держать вместе" : "независимо";
+  var same = dxfSameProfile();
+  var st = $("#dxfStat");
+  if (st) st.textContent = S.profiles.length ? same ? "контуры совпадают" : "разные контуры" : "—";
+  var i1 = $("#dxfRootInfo");
+  if (i1) i1.innerHTML = dxfSideInfo("root");
+  var i2 = $("#dxfTipInfo");
+  if (i2) i2.innerHTML = dxfSideInfo("tip");
+  var inf = $("#dxfInfo");
+  if (inf) {
+    inf.innerHTML = "<b>Левая башня (X,Y):</b> " + dxfSideInfo("root") + "<br>" + "<b>Правая башня (A,B):</b> " + dxfSideInfo("tip") + "<br>" + (same ? "<b>Синхронизация:</b> контуры совпадают — обе нервюры одинаковые, рез идёт прямой призмой." : "<b>Синхронизация:</b> контуры разные — рез идёт по двум разным нервюрам (крыло с переменным профилем).");
+  }
+  renderDxfCanvas();
+}
+/* Оба контура в мм, наложенные друг на другу: так видно и совпадение башень,
+   и разницу в размере. Сетка — 10 мм, подписи зелёные 12 px (drawGrid). */
+function renderDxfCanvas() {
+  var cv = $("#dxfCanvas");
+  var r = setupCanvas(cv);
+  if (!r) return; // вкладка ещё не показана или холст не размерен
+  var ctx = r.ctx,
+    w = r.w,
+    h = r.h;
+  var ri = dxfIdx("root"),
+    ti = dxfIdx("tip");
+  var rp = S.profiles[ri],
+    tp = S.profiles[ti];
+  var cr = profileChord(ri, CFG.root.chord),
+    ct = profileChord(ti, CFG.tip.chord);
+  var toMM = (p, ch) => p && p.pts && p.pts.length ? p.pts.map(q => [q[0] * ch, q[1] * ch]) : null;
+  var A = toMM(rp, cr),
+    B = toMM(tp, ct);
+  var all = (A || []).concat(B || []);
+  if (all.length < 3) {
+    ctx.fillStyle = "#8b9bb4";
+    ctx.font = "13px Arial";
+    ctx.fillText("Нет профиля", 16, 26);
+    return;
+  }
+  all.push([0, 0]);
+  var map = makeMap(all, w, h, 34);
+  drawGrid(ctx, map, w, h, 1); // сетка в миллиметрах: клетка 10 мм
+  ctx.strokeStyle = "#3a4a63";
+  ctx.lineWidth = 1; // хорда y = 0 — до самой длинной нервюры
+  ctx.beginPath();
+  ctx.moveTo(map.X(0), map.Y(0));
+  ctx.lineTo(map.X(Math.max(cr, ct)), map.Y(0));
+  ctx.stroke();
+  var same = dxfSameProfile();
+  if (A) drawContour(ctx, map, A, {
+    color: "#4ea1ff",
+    lw: 2
+  });
+  if (B) {
+    ctx.save();
+    if (same) ctx.setLineDash([7, 5]); // совпали — пунктир лежит ровно на синей линии
+    drawContour(ctx, map, B, {
+      color: same ? "#4ea1ff" : "#ffb347",
+      lw: 2
+    });
+    ctx.restore();
+  }
+  ctx.font = "12px Arial";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  ctx.fillStyle = "#4ea1ff";
+  ctx.fillText("левая (X,Y) — " + (rp ? rp.name : "—"), 8, 6);
+  ctx.fillStyle = same ? "#4ea1ff" : "#ffb347";
+  ctx.fillText("правая (A,B) — " + (tp ? tp.name : "—"), 8, 22);
+  ctx.textBaseline = "alphabetic";
+}
+
 /* ================= вкладки ================= */
 function switchTab(name) {
   $$("#tabs button").forEach(b => b.classList.toggle("act", b.dataset.tab === name));
   $$("section.tab").forEach(s => s.classList.toggle("act", s.id === "tab-" + name));
   layoutAllCols(); // размеры панелей новой вкладки — до отрисовки холстов
+  if (name === "cutdxf") renderDxf(); // сразу, синхронно: холст должен быть готов без ожидания кадра
   requestAnimationFrame(() => {
     if (name === "profiles") {
       renderProfileList();
@@ -5337,6 +5680,9 @@ function switchTab(name) {
     }
     if (name === "cut") {
       refreshCut(false);
+    }
+    if (name === "cutdxf") {
+      renderDxf();
     }
   });
 }
@@ -5365,76 +5711,76 @@ function saveTypes(name) {
   }] : null;
 }
 function saveBlob(name, blob) {
-  var h, opts, types, w, got, why, url, nav, isPdf, _t7, _t8, _t9, _t0;
-  return _regeneratorAsync(function (_context5) {
-    while (1) switch (_context5.p = _context5.n) {
+  var h, opts, types, w, got, why, url, nav, isPdf, _t8, _t9, _t0, _t1;
+  return _regeneratorAsync(function (_context6) {
+    while (1) switch (_context6.p = _context6.n) {
       case 0:
         if (!window.showSaveFilePicker) {
-          _context5.n = 14;
+          _context6.n = 14;
           break;
         }
         h = null;
-        _context5.p = 1;
+        _context6.p = 1;
         opts = {
           suggestedName: name
         };
         types = saveTypes(name);
         if (types) opts.types = types;
-        _context5.n = 2;
+        _context6.n = 2;
         return _awaitAsyncGenerator(showSaveFilePicker(opts));
       case 2:
-        h = _context5.v;
-        _context5.n = 5;
+        h = _context6.v;
+        _context6.n = 5;
         break;
       case 3:
-        _context5.p = 3;
-        _t7 = _context5.v;
-        if (!(_t7 && _t7.name === "AbortError")) {
-          _context5.n = 4;
+        _context6.p = 3;
+        _t8 = _context6.v;
+        if (!(_t8 && _t8.name === "AbortError")) {
+          _context6.n = 4;
           break;
         }
         toast("Сохранение отменено");
-        return _context5.a(2, "cancel");
+        return _context6.a(2, "cancel");
       case 4:
         h = null; // диалог недоступен — идём дальше
       case 5:
         if (!h) {
-          _context5.n = 14;
+          _context6.n = 14;
           break;
         }
-        _context5.p = 6;
-        _context5.n = 7;
+        _context6.p = 6;
+        _context6.n = 7;
         return _awaitAsyncGenerator(h.createWritable());
       case 7:
-        w = _context5.v;
-        _t8 = w;
-        _context5.n = 8;
+        w = _context6.v;
+        _t9 = w;
+        _context6.n = 8;
         return _awaitAsyncGenerator(blob.arrayBuffer());
       case 8:
-        _context5.n = 9;
-        return _awaitAsyncGenerator(_t8.write.call(_t8, _context5.v));
+        _context6.n = 9;
+        return _awaitAsyncGenerator(_t9.write.call(_t9, _context6.v));
       case 9:
-        _context5.n = 10;
+        _context6.n = 10;
         return _awaitAsyncGenerator(w.close());
       case 10:
-        _context5.n = 11;
+        _context6.n = 11;
         return _awaitAsyncGenerator(h.getFile());
       case 11:
-        got = _context5.v;
+        got = _context6.v;
         if (!(!got || !got.size)) {
-          _context5.n = 12;
+          _context6.n = 12;
           break;
         }
         throw new Error("файл записался пустым");
       case 12:
-        return _context5.a(2, "saved");
+        return _context6.a(2, "saved");
       case 13:
-        _context5.p = 13;
-        _t9 = _context5.v;
-        why = _t9 && (_t9.message || _t9.name) || "?";
+        _context6.p = 13;
+        _t0 = _context6.v;
+        why = _t0 && (_t0.message || _t0.name) || "?";
         console.error("saveBlob через диалог:", why);
       case 14:
-        _context5.p = 14;
+        _context6.p = 14;
         url = URL.createObjectURL(blob);
         nav = document.createElement("a");
         nav.href = url;
@@ -5445,12 +5791,12 @@ function saveBlob(name, blob) {
         nav.click();
         nav.remove();
         setTimeout(() => URL.revokeObjectURL(url), 60000);
-        return _context5.a(2, "preview");
+        return _context6.a(2, "preview");
       case 15:
-        _context5.p = 15;
-        _t0 = _context5.v;
-        console.error("saveBlob:", _t0 && _t0.message);
-        return _context5.a(2, "fail");
+        _context6.p = 15;
+        _t1 = _context6.v;
+        console.error("saveBlob:", _t1 && _t1.message);
+        return _context6.a(2, "fail");
     }
   }, null, null, [[14, 15], [6, 13], [1, 3]], Promise);
 }
@@ -5467,19 +5813,19 @@ function downloadBlob(name, blob) {
 function datText(name, pts, chord) {
   var ch = +chord || 1;
   var L = [name];
-  var _iterator18 = _createForOfIteratorHelper(pts),
-    _step18;
+  var _iterator19 = _createForOfIteratorHelper(pts),
+    _step19;
   try {
-    for (_iterator18.s(); !(_step18 = _iterator18.n()).done;) {
-      var _step18$value = _slicedToArray(_step18.value, 2),
-        x = _step18$value[0],
-        y = _step18$value[1];
+    for (_iterator19.s(); !(_step19 = _iterator19.n()).done;) {
+      var _step19$value = _slicedToArray(_step19.value, 2),
+        x = _step19$value[0],
+        y = _step19$value[1];
       L.push((x * ch).toFixed(6) + "  " + (y * ch).toFixed(6));
     }
   } catch (err) {
-    _iterator18.e(err);
+    _iterator19.e(err);
   } finally {
-    _iterator18.f();
+    _iterator19.f();
   }
   return L.join("\n") + "\n";
 }
@@ -5538,22 +5884,22 @@ function dxfText(name, pts, chord) {
     xmax = -Infinity,
     ymin = Infinity,
     ymax = -Infinity;
-  var _iterator19 = _createForOfIteratorHelper(P),
-    _step19;
+  var _iterator20 = _createForOfIteratorHelper(P),
+    _step20;
   try {
-    for (_iterator19.s(); !(_step19 = _iterator19.n()).done;) {
-      var _step19$value = _slicedToArray(_step19.value, 2),
-        x = _step19$value[0],
-        y = _step19$value[1];
+    for (_iterator20.s(); !(_step20 = _iterator20.n()).done;) {
+      var _step20$value = _slicedToArray(_step20.value, 2),
+        x = _step20$value[0],
+        y = _step20$value[1];
       if (x < xmin) xmin = x;
       if (x > xmax) xmax = x;
       if (y < ymin) ymin = y;
       if (y > ymax) ymax = y;
     }
   } catch (err) {
-    _iterator19.e(err);
+    _iterator20.e(err);
   } finally {
-    _iterator19.f();
+    _iterator20.f();
   }
   var f = v => (Math.round(v * 1e6) / 1e6).toFixed(6);
   var clean = t => String(t || "AIRFOIL").replace(/[^\wа-яА-Я .\-]+/gi, "").trim().toUpperCase().slice(0, 40) || "AIRFOIL";
@@ -5844,20 +6190,20 @@ function dxfText(name, pts, chord) {
   g(90, String(P.length));
   g(70, "1");
   g(43, f(0));
-  var _iterator20 = _createForOfIteratorHelper(P),
-    _step20;
+  var _iterator21 = _createForOfIteratorHelper(P),
+    _step21;
   try {
-    for (_iterator20.s(); !(_step20 = _iterator20.n()).done;) {
-      var _step20$value = _slicedToArray(_step20.value, 2),
-        _x3 = _step20$value[0],
-        _y2 = _step20$value[1];
+    for (_iterator21.s(); !(_step21 = _iterator21.n()).done;) {
+      var _step21$value = _slicedToArray(_step21.value, 2),
+        _x3 = _step21$value[0],
+        _y2 = _step21$value[1];
       g(10, f(_x3));
       g(20, f(_y2));
     }
   } catch (err) {
-    _iterator20.e(err);
+    _iterator21.e(err);
   } finally {
-    _iterator20.f();
+    _iterator21.f();
   }
   g(0, "ENDSEC");
 
@@ -5948,13 +6294,13 @@ function parseDxf(text) {
   var cur = null,
     ent = "",
     vert = false;
-  var _iterator21 = _createForOfIteratorHelper(pairs),
-    _step21;
+  var _iterator22 = _createForOfIteratorHelper(pairs),
+    _step22;
   try {
-    for (_iterator21.s(); !(_step21 = _iterator21.n()).done;) {
-      var _step21$value = _slicedToArray(_step21.value, 2),
-        code = _step21$value[0],
-        val = _step21$value[1];
+    for (_iterator22.s(); !(_step22 = _iterator22.n()).done;) {
+      var _step22$value = _slicedToArray(_step22.value, 2),
+        code = _step22$value[0],
+        val = _step22$value[1];
       if (code === 0) {
         ent = val.toUpperCase();
         if (ent === "POLYLINE") {
@@ -5980,9 +6326,9 @@ function parseDxf(text) {
       }
     }
   } catch (err) {
-    _iterator21.e(err);
+    _iterator22.e(err);
   } finally {
-    _iterator21.f();
+    _iterator22.f();
   }
   var best = null;
   for (var _i28 = 0, _polys = polys; _i28 < _polys.length; _i28++) {
@@ -6014,17 +6360,17 @@ function parseStep(text) {
   }
   var pts = [];
   if (best) {
-    var _iterator22 = _createForOfIteratorHelper(best),
-      _step22;
+    var _iterator23 = _createForOfIteratorHelper(best),
+      _step23;
     try {
-      for (_iterator22.s(); !(_step22 = _iterator22.n()).done;) {
-        var id = _step22.value;
+      for (_iterator23.s(); !(_step23 = _iterator23.n()).done;) {
+        var id = _step23.value;
         if (byId[id]) pts.push(byId[id]);
       }
     } catch (err) {
-      _iterator22.e(err);
+      _iterator23.e(err);
     } finally {
-      _iterator22.f();
+      _iterator23.f();
     }
   }
   if (pts.length < 4) pts = order.map(id => byId[id]);
@@ -6053,9 +6399,9 @@ function exportProfileFile(fmt) {
     }));
     toast("DXF: хорда " + ch + " мм — контур в натуральную величину, единицы в файле — миллиметры");
   } else {
-    var _t1 = stepText(base, S.edit, ch);
-    if (!_t1) return toast("Не удалось построить STEP");
-    saveBlob(base + ".step", new Blob([_t1], {
+    var _t10 = stepText(base, S.edit, ch);
+    if (!_t10) return toast("Не удалось построить STEP");
+    saveBlob(base + ".step", new Blob([_t10], {
       type: "application/step;charset=utf-8"
     }));
     toast("STEP: хорда " + ch + " мм — контур в натуральную величину, единицы в файле — миллиметры");
@@ -6081,18 +6427,18 @@ function ribContourMM(prof, chord) {
   var pts = smoothOutline(prof && prof.pts).map(([x, y]) => [x * chord, y * chord]);
   var ymin = Infinity,
     ymax = -Infinity;
-  var _iterator23 = _createForOfIteratorHelper(pts),
-    _step23;
+  var _iterator24 = _createForOfIteratorHelper(pts),
+    _step24;
   try {
-    for (_iterator23.s(); !(_step23 = _iterator23.n()).done;) {
-      var p = _step23.value;
+    for (_iterator24.s(); !(_step24 = _iterator24.n()).done;) {
+      var p = _step24.value;
       if (p[1] < ymin) ymin = p[1];
       if (p[1] > ymax) ymax = p[1];
     }
   } catch (err) {
-    _iterator23.e(err);
+    _iterator24.e(err);
   } finally {
-    _iterator23.f();
+    _iterator24.f();
   }
   return {
     pts,
@@ -6111,11 +6457,11 @@ function ribY(prof, upper, fx, chord) {
    и привязка к обводу берутся те же, что уходят в рез. */
 function ribCutoutsMM(endKey, prof, chord) {
   var out = [];
-  var _iterator24 = _createForOfIteratorHelper(sparDefsResolved()),
-    _step24;
+  var _iterator25 = _createForOfIteratorHelper(sparDefsResolved()),
+    _step25;
   try {
-    for (_iterator24.s(); !(_step24 = _iterator24.n()).done;) {
-      var def = _step24.value;
+    for (_iterator25.s(); !(_step25 = _iterator25.n()).done;) {
+      var def = _step25.value;
       var src = def[endKey] && typeof def[endKey] === "object" ? def[endKey] : {
         x: 0.3 * chord,
         y: 0
@@ -6169,9 +6515,9 @@ function ribCutoutsMM(endKey, prof, chord) {
       }
     }
   } catch (err) {
-    _iterator24.e(err);
+    _iterator25.e(err);
   } finally {
-    _iterator24.f();
+    _iterator25.f();
   }
   return out;
 }
@@ -6267,19 +6613,19 @@ function ribSheetCanvas(e) {
   // вырезы лонжерона: штрихом, без подписей и размеров
   ctx.strokeStyle = "#111";
   ctx.lineWidth = 0.5 * P;
-  var _iterator25 = _createForOfIteratorHelper(cut),
-    _step25;
+  var _iterator26 = _createForOfIteratorHelper(cut),
+    _step26;
   try {
-    for (_iterator25.s(); !(_step25 = _iterator25.n()).done;) {
-      var c = _step25.value;
+    for (_iterator26.s(); !(_step26 = _iterator26.n()).done;) {
+      var c = _step26.value;
       dashPath(ctx, c.pts.map(p => [X(p[0]), Y(p[1])]), 2.6 * P, 1.4 * P, true);
     }
 
     // линейка 100 мм с шагом 10 — проверка масштаба после печати
   } catch (err) {
-    _iterator25.e(err);
+    _iterator26.e(err);
   } finally {
-    _iterator25.f();
+    _iterator26.f();
   }
   var barY = (topZone + ribH + 14) * P,
     barX = X(0),
@@ -6792,23 +7138,23 @@ function init() {
   })();
   $("#pSeed").onclick = () => {
     var n = 0;
-    var _iterator26 = _createForOfIteratorHelper(seedProfiles()),
-      _step26;
+    var _iterator27 = _createForOfIteratorHelper(seedProfiles()),
+      _step27;
     try {
       var _loop1 = function _loop1() {
-        var sp = _step26.value;
+        var sp = _step27.value;
         if (!S.profiles.some(p => p.name === sp.name)) {
           S.profiles.push(sp);
           n++;
         }
       };
-      for (_iterator26.s(); !(_step26 = _iterator26.n()).done;) {
+      for (_iterator27.s(); !(_step27 = _iterator27.n()).done;) {
         _loop1();
       }
     } catch (err) {
-      _iterator26.e(err);
+      _iterator27.e(err);
     } finally {
-      _iterator26.f();
+      _iterator27.f();
     }
     saveProfiles();
     renderProfileList();
@@ -7032,90 +7378,90 @@ function init() {
     f.click();
   };
   if ($("#cPrjFile")) $("#cPrjFile").onchange = e => {
-    var f, o, r, msg, _t10, _t11;
-    return _regeneratorAsync(function (_context6) {
-      while (1) switch (_context6.p = _context6.n) {
+    var f, o, r, msg, _t11, _t12;
+    return _regeneratorAsync(function (_context7) {
+      while (1) switch (_context7.p = _context7.n) {
         case 0:
           f = e.target.files && e.target.files[0];
           if (f) {
-            _context6.n = 1;
+            _context7.n = 1;
             break;
           }
-          return _context6.a(2);
+          return _context7.a(2);
         case 1:
-          _context6.p = 1;
-          _t10 = JSON;
-          _context6.n = 2;
+          _context7.p = 1;
+          _t11 = JSON;
+          _context7.n = 2;
           return _awaitAsyncGenerator(_blobText(f));
         case 2:
-          o = _t10.parse.call(_t10, _context6.v);
+          o = _t11.parse.call(_t11, _context7.v);
           r = projOpen(o);
           msg = "Проект открыт";
           if (r.added) msg += " · профилей добавлено в базу: " + r.added;
           if (r.chordFixed) msg += " · хорда профиля возвращена из проекта";
           toast(msg);
-          _context6.n = 4;
+          _context7.n = 4;
           break;
         case 3:
-          _context6.p = 3;
-          _t11 = _context6.v;
-          toast("Не удалось открыть проект: " + (_t11 && _t11.message || "файл не читается"));
+          _context7.p = 3;
+          _t12 = _context7.v;
+          toast("Не удалось открыть проект: " + (_t12 && _t12.message || "файл не читается"));
         case 4:
           e.target.value = "";
         case 5:
-          return _context6.a(2);
+          return _context7.a(2);
       }
     }, null, null, [[1, 3]], Promise);
   };
   $("#cRibPdf").onclick = () => {
     var p, st;
-    return _regeneratorAsync(function (_context7) {
-      while (1) switch (_context7.n) {
+    return _regeneratorAsync(function (_context8) {
+      while (1) switch (_context8.n) {
         case 0:
           p = ribPdf();
           if (p) {
-            _context7.n = 1;
+            _context8.n = 1;
             break;
           }
-          return _context7.a(2, toast("Нет профилей для шаблона"));
+          return _context8.a(2, toast("Нет профилей для шаблона"));
         case 1:
-          _context7.n = 2;
+          _context8.n = 2;
           return _awaitAsyncGenerator(downloadBlob(p.name, p.blob));
         case 2:
-          st = _context7.v;
+          st = _context8.v;
           if (st === "saved") toast("PDF шаблон нервюр 1:1 сохранён — печатай в масштабе 100 %, без «вписать в страницу»");
         case 3:
-          return _context7.a(2);
+          return _context8.a(2);
       }
     }, null, null, null, Promise);
   };
   $("#cCopy").onclick = () => {
-    var code, _t12;
-    return _regeneratorAsync(function (_context8) {
-      while (1) switch (_context8.p = _context8.n) {
+    var code, _t13;
+    return _regeneratorAsync(function (_context9) {
+      while (1) switch (_context9.p = _context9.n) {
         case 0:
           code = $("#cGcode").value;
           if (code) {
-            _context8.n = 1;
+            _context9.n = 1;
             break;
           }
-          return _context8.a(2);
+          return _context9.a(2);
         case 1:
-          _context8.p = 1;
-          _context8.n = 2;
+          _context9.p = 1;
+          _context9.n = 2;
           return _awaitAsyncGenerator(navigator.clipboard.writeText(code));
         case 2:
           toast("Скопировано");
-          _context8.n = 4;
+          _context9.n = 4;
           break;
         case 3:
-          _context8.p = 3;
-          _t12 = _context8.v;
+          _context9.p = 3;
+          _t13 = _context9.v;
           $("#cGcode").select();
           document.execCommand("copy");
           toast("Скопировано");
         case 4:
-          return _context8.a(2);
+          return _context9.a(2);
       }
     }, null, null, [[1, 3]], Promise);
   };
@@ -7133,6 +7479,37 @@ function init() {
     $("#cScrub").value = lbl;
   };
   $("#cShowWire").onchange = renderCut;
+
+  // пенорезка DXF: загрузка контуров по башням и синхронизация профилей
+  if ($("#dxfRootBtn")) $("#dxfRootBtn").onclick = () => $("#dxfRootFile").click();
+  if ($("#dxfTipBtn")) $("#dxfTipBtn").onclick = () => $("#dxfTipFile").click();
+  if ($("#dxfRootFile")) $("#dxfRootFile").onchange = () => dxfLoadTo("root");
+  if ($("#dxfTipFile")) $("#dxfTipFile").onchange = () => dxfLoadTo("tip");
+  ["#dxfRootProf", "#dxfTipProf"].forEach(id => {
+    var el = $(id);
+    if (!el) return;
+    el.addEventListener("change", () => dxfPick(id === "#dxfRootProf" ? "root" : "tip", +el.value || 0));
+  });
+  if ($("#dxfSync")) $("#dxfSync").onchange = () => {
+    if (dxfSyncOn()) {
+      var i = dxfIdx("root");
+      CFG.tip.idx = i;
+      CFG.tip.name = (S.profiles[i] || {}).name || "";
+      DXF_FILE.tip = DXF_FILE.root || "";
+      dxfChanged("Синхронизация включена — обе башни на «" + ((S.profiles[i] || {}).name || "") + "»");
+    } else {
+      dxfChanged("Синхронизация выключена — башни настраиваются отдельно");
+    }
+  };
+  if ($("#dxfCopyTip")) $("#dxfCopyTip").onclick = () => dxfCopy("root", "tip");
+  if ($("#dxfCopyRoot")) $("#dxfCopyRoot").onclick = () => dxfCopy("tip", "root");
+  if ($("#dxfGen")) $("#dxfGen").onclick = () => {
+    var g = $("#cGen");
+    if (g) g.click();
+    renderDxf();
+  };
+  if ($("#dxfToCut")) $("#dxfToCut").onclick = () => switchTab("cut");
+  if ($("#dxfToEditor")) $("#dxfToEditor").onclick = () => openInEditor(dxfIdx(DXF_LAST));
 
   // плеер
   $("#simPlay").onclick = playPause;
@@ -7236,23 +7613,23 @@ function init() {
   };
   $("#prjLoad").onclick = () => $("#prjFile").click();
   $("#prjFile").onchange = e => {
-    var f, o, _t13, _t14;
-    return _regeneratorAsync(function (_context9) {
-      while (1) switch (_context9.p = _context9.n) {
+    var f, o, _t14, _t15;
+    return _regeneratorAsync(function (_context0) {
+      while (1) switch (_context0.p = _context0.n) {
         case 0:
           f = e.target.files[0];
           if (f) {
-            _context9.n = 1;
+            _context0.n = 1;
             break;
           }
-          return _context9.a(2);
+          return _context0.a(2);
         case 1:
-          _context9.p = 1;
-          _t13 = JSON;
-          _context9.n = 2;
+          _context0.p = 1;
+          _t14 = JSON;
+          _context0.n = 2;
           return _awaitAsyncGenerator(_blobText(f));
         case 2:
-          o = _t13.parse.call(_t13, _context9.v);
+          o = _t14.parse.call(_t14, _context0.v);
           if (Array.isArray(o.profiles) && o.profiles.length) {
             S.profiles = o.profiles;
             S.sel = 0;
@@ -7278,16 +7655,16 @@ function init() {
           fillEditorSelect();
           refreshCut();
           toast("Проект загружен");
-          _context9.n = 4;
+          _context0.n = 4;
           break;
         case 3:
-          _context9.p = 3;
-          _t14 = _context9.v;
+          _context0.p = 3;
+          _t15 = _context0.v;
           toast("Не удалось прочитать файл");
         case 4:
           e.target.value = "";
         case 5:
-          return _context9.a(2);
+          return _context0.a(2);
       }
     }, null, null, [[1, 3]], Promise);
   };
@@ -7502,6 +7879,7 @@ function init() {
       renderCut();
       renderSparPreview();
     }
+    if (t.id === "tab-cutdxf") renderDxf();
   });
   syncFormFromCfg();
   SIM.speed = +$("#simSpeed").value || 1;
@@ -7529,42 +7907,52 @@ function fromCode() {
   $("#gMake").click();
 }
 function importFiles(files) {
-  var ok, bad, list, _iterator27, _step27, f, txt, base, p, pts, _pts, q, _t15, _t16;
-  return _regeneratorAsync(function (_context0) {
-    while (1) switch (_context0.p = _context0.n) {
+  var ok, bad, list, _iterator28, _step28, f, txt, base, p, raw, pts, ch, _raw, _pts, _ch, q, _t16, _t17;
+  return _regeneratorAsync(function (_context1) {
+    while (1) switch (_context1.p = _context1.n) {
       case 0:
         ok = 0, bad = 0;
         list = Array.from(files).filter(f => /\.(dat|txt|csv|dxf|step|stp)$/i.test(f.name));
-        _iterator27 = _createForOfIteratorHelper(list);
-        _context0.p = 1;
-        _iterator27.s();
+        _iterator28 = _createForOfIteratorHelper(list);
+        _context1.p = 1;
+        _iterator28.s();
       case 2:
-        if ((_step27 = _iterator27.n()).done) {
-          _context0.n = 7;
+        if ((_step28 = _iterator28.n()).done) {
+          _context1.n = 7;
           break;
         }
-        f = _step27.value;
-        _context0.p = 3;
-        _context0.n = 4;
+        f = _step28.value;
+        _context1.p = 3;
+        _context1.n = 4;
         return _awaitAsyncGenerator(_blobText(f));
       case 4:
-        txt = _context0.v;
+        txt = _context1.v;
         base = f.name.replace(/\.[^.]+$/, "");
         p = null;
         if (/\.dxf$/i.test(f.name)) {
-          pts = normalizeImported(parseDxf(txt));
-          if (pts) p = {
-            name: uniqueProfileName(base),
-            pts,
-            src: "edit"
-          };
+          raw = parseDxf(txt);
+          pts = normalizeImported(raw);
+          if (pts) {
+            p = {
+              name: uniqueProfileName(base),
+              pts,
+              src: "edit"
+            };
+            ch = rawChordMM(raw); // DXF в миллиметрах: хорда = ширина контура в файле
+            if (ch) p.chord = ch;
+          }
         } else if (/\.(step|stp)$/i.test(f.name)) {
-          _pts = normalizeImported(parseStep(txt));
-          if (_pts) p = {
-            name: uniqueProfileName(base),
-            pts: _pts,
-            src: "edit"
-          };
+          _raw = parseStep(txt);
+          _pts = normalizeImported(_raw);
+          if (_pts) {
+            p = {
+              name: uniqueProfileName(base),
+              pts: _pts,
+              src: "edit"
+            };
+            _ch = rawChordMM(_raw);
+            if (_ch) p.chord = _ch;
+          }
         } else {
           q = parseDat(txt, base);
           if (q) {
@@ -7576,26 +7964,26 @@ function importFiles(files) {
           addProfile(p, true);
           ok++;
         } else bad++;
-        _context0.n = 6;
+        _context1.n = 6;
         break;
       case 5:
-        _context0.p = 5;
-        _t15 = _context0.v;
+        _context1.p = 5;
+        _t16 = _context1.v;
         bad++;
       case 6:
-        _context0.n = 2;
+        _context1.n = 2;
         break;
       case 7:
-        _context0.n = 9;
+        _context1.n = 9;
         break;
       case 8:
-        _context0.p = 8;
-        _t16 = _context0.v;
-        _iterator27.e(_t16);
+        _context1.p = 8;
+        _t17 = _context1.v;
+        _iterator28.e(_t17);
       case 9:
-        _context0.p = 9;
-        _iterator27.f();
-        return _context0.f(9);
+        _context1.p = 9;
+        _iterator28.f();
+        return _context1.f(9);
       case 10:
         renderProfileList();
         renderProfileCanvas();
@@ -7603,7 +7991,7 @@ function importFiles(files) {
         fillCutSelects();
         toast("Импортировано: " + ok + (bad ? ", не распознано: " + bad : "") + (list.length ? "" : " (нет .dat/.dxf/.step)"));
       case 11:
-        return _context0.a(2);
+        return _context1.a(2);
     }
   }, null, null, [[3, 5], [1, 8, 9, 10]], Promise);
 }

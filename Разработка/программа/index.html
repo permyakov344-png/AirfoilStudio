@@ -141,6 +141,7 @@ table.pts tr:hover td{background:#151d29}
     <button data-tab="profiles" class="act">Профили</button>
     <button data-tab="editor">Редактор</button>
     <button data-tab="cut">Пенорезка</button>
+    <button data-tab="cutdxf">Пенорезка DXF</button>
     <button data-tab="machine">Станок</button>
     <button data-tab="help">Справка</button>
   </nav>
@@ -522,6 +523,69 @@ table.pts tr:hover td{background:#151d29}
       <div class="hd">Управляющая программа <button id="cCopy" class="gh" style="margin-left:auto">Копировать</button></div>
       <textarea id="cGcode" class="txt mono" spellcheck="false" placeholder="Нажми «Сформировать УП»"></textarea>
       <div class="hint" id="cGcodeInfo">—</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ ПЕНОРЕЗКА DXF ============================ -->
+<section class="tab" id="tab-cutdxf">
+  <div class="cols">
+    <div class="panel" style="width:380px;overflow:auto">
+      <div class="hd">Пенорезка DXF <span class="pill" id="dxfPill">—</span></div>
+      <div class="hint" style="font-size:11px;line-height:1.45">Загрузи контур <b>.dxf</b> отдельно на каждую башню:
+        слева корневая нервюра (оси X,Y), справа концевая (оси A,B). Файл распознаётся так же, как импорт в «Профилих»,
+        становится профилем в базе и сразу уходит в рез.</div>
+
+      <div class="row" style="gap:4px"><b style="color:var(--acc2)">Левая башня · корневая нервюра (X,Y)</b></div>
+      <label class="fld"><b>Профиль</b><select id="dxfRootProf"></select></label>
+      <div class="row">
+        <button id="dxfRootBtn" class="pri grow1" title="Выбрать файл .dxf с контуром нервюры — он станет профилем левой башни">Загрузить DXF → левая</button>
+        <input type="file" id="dxfRootFile" accept=".dxf,application/dxf" hidden>
+      </div>
+      <div class="hint" id="dxfRootInfo" style="font-size:11px;line-height:1.45">—</div>
+
+      <div class="sep"></div>
+      <div class="row" style="gap:4px"><b style="color:var(--acc)">Правая башня · концевая нервюра (A,B)</b></div>
+      <label class="fld"><b>Профиль</b><select id="dxfTipProf"></select></label>
+      <div class="row">
+        <button id="dxfTipBtn" class="pri grow1" title="Выбрать файл .dxf с контуром нервюры — он станет профилем правой башни">Загрузить DXF → правая</button>
+        <input type="file" id="dxfTipFile" accept=".dxf,application/dxf" hidden>
+      </div>
+      <div class="hint" id="dxfTipInfo" style="font-size:11px;line-height:1.45">—</div>
+
+      <div class="sep"></div>
+      <div class="hd" style="font-size:12px">Синхронизация загруженных профилей <span class="pill" id="dxfSyncPill">—</span></div>
+      <label class="row" style="gap:6px;color:var(--dim);font-size:12px">
+        <input type="checkbox" id="dxfSync" checked> держать башни на одном контуре
+      </label>
+      <div class="hint" style="font-size:11px;line-height:1.45">Включено: что загрузил в одну башню, встаёт и в другую —
+        обе нервюры одинаковые, рез идёт прямой призмой. Выключено: башни живут отдельно (крыло с переменным профилем),
+        а кнопки ниже переносят контур из одной башни в другую.</div>
+      <div class="row">
+        <button id="dxfCopyTip" class="grow1" title="Взять контур левой башни и поставить его на правую">левая → правая</button>
+        <button id="dxfCopyRoot" class="grow1" title="Взять контур правой башни и поставить его на левую">правая → левая</button>
+      </div>
+
+      <div class="sep"></div>
+      <div class="row">
+        <button id="dxfGen" class="pri grow1">Сформировать УП</button>
+        <button id="dxfToCut">К пенорезке</button>
+      </div>
+      <div class="row">
+        <button id="dxfToEditor" class="grow1" title="Открыть контур в редакторе — там поле «Хорда профиля, мм», оно и задаёт размер реза">Хорда — в редакторе</button>
+      </div>
+      <div class="hint" style="font-size:11px;line-height:1.45">Отдельного поля хорды здесь нет: размер реза берётся из
+        записи профиля (поле «Хорда профиля, мм» в редакторе). Если DXF нарисован в реальных миллиметрах, хорда
+        записывается в профиль автоматически — по ширине контура в самом файле.</div>
+    </div>
+
+    <div class="panel grow">
+      <div class="hd">Оба торца в миллиметрах <span class="pill" id="dxfStat">—</span></div>
+      <div class="cvWrap" style="min-height:240px"><canvas id="dxfCanvas"></canvas></div>
+      <div class="hint" id="dxfInfo" style="font-size:11px;line-height:1.5">—</div>
+      <div class="hint" style="font-size:11px;line-height:1.45">Контуры наложены в натуральную величину: синяя линия —
+        левая башня (X,Y), оранжевая — правая (A,B); когда башни синхронны, они лежат друг на друге (пунктир сверху).
+        Сетка 10 мм, подписи по краям зелёные, линия y = 0 — хорда. Заготовка, лонжерон, подача и проект — в «Пенорезке».</div>
     </div>
   </div>
 </section>
@@ -3842,7 +3906,8 @@ function buildGcode(){
 
 /* ================= заполнение форм ================= */
 function fillCutSelects(){
-  for(const [id, key] of [["#cRootProf","root"], ["#cTipProf","tip"]]){
+  for(const [id, key] of [["#cRootProf","root"], ["#cTipProf","tip"],
+                          ["#dxfRootProf","root"], ["#dxfTipProf","tip"]]){
     const sel = $(id);
     sel.innerHTML = "";
     S.profiles.forEach((p,i) => {
@@ -4508,15 +4573,220 @@ function projOpen(o){
   return { added, chordFixed };
 }
 
+/* ================= вкладка «Пенорезка DXF» =================
+   Загрузка контура .dxf на каждую башню отдельно: слева корневая нервюра
+   (оси X,Y), справа концевая (оси A,B), плюс синхронизация загруженных
+   профилей. Включённая синхронизация держит обе башни на одном контуре
+   (прямая призма), выключенная — даёт резать крыло с разными нервюрами.
+   Файл разбирается тем же parseDxf, что и импорт в «Профилих», но результат
+   сразу уходит в рез, минуя список профилей. */
+
+const DXF_FILE = { root: "", tip: "" };   // имена последних загруженных файлов
+let DXF_LAST = "root";                   // куда загружали последним — туда откроем редактор
+
+function dxfIdx(key){
+  return clamp(CFG[key].idx | 0, 0, Math.max(0, S.profiles.length - 1));
+}
+function dxfSyncOn(){
+  const el = $("#dxfSync");
+  return !!(el && el.checked);
+}
+function dxfSamePts(a, b){
+  if(!a || !b || a.length !== b.length) return false;
+  for(let i = 0; i < a.length; i++){
+    if(Math.abs(a[i][0] - b[i][0]) > 1e-9 || Math.abs(a[i][1] - b[i][1]) > 1e-9) return false;
+  }
+  return true;
+}
+/* Совпадают ли контуры двух башень — это и есть результат синхронизации,
+   его видно на холсте (оранжевая линия лежит на синей). */
+function dxfSameProfile(){
+  const r = S.profiles[dxfIdx("root")], t = S.profiles[dxfIdx("tip")];
+  if(!r || !t) return false;
+  return r.name === t.name && dxfSamePts(r.pts, t.pts);
+}
+/* Строка состояния одной башни: файл, профиль, точек, хорда. */
+function dxfSideInfo(key){
+  const i = dxfIdx(key), p = S.profiles[i];
+  if(!p) return "профиля нет";
+  const ch = profileChord(i, CFG[key].chord);
+  return (DXF_FILE[key] ? "файл <b>" + esc(DXF_FILE[key]) + "</b> → " : "") +
+         "«" + esc(p.name) + "» · точек " + p.pts.length + " · хорда " + ch + " мм " +
+         (+p.chord > 0 ? "(из записи профиля)" : "(задаётся в редакторе)");
+}
+/* Всё, что меняет профили башен: пересобрать расчёт, сбросить УП, перерисовать. */
+function dxfChanged(msg){
+  fillCutSelects();
+  const gc = $("#cGcode");
+  if(gc) gc.value = "";
+  const gi = $("#cGcodeInfo");
+  if(gi) gi.textContent = "Параметры изменены — сформируй УП заново";
+  refreshCut();
+  saveCfg();
+  renderProfileCanvas();
+  renderDxf();
+  if(msg) toast(msg);
+}
+/* Выбор профиля на башне; при включённой синхронизации — сразу на обеих. */
+function dxfPick(key, idx){
+  idx = clamp(idx | 0, 0, Math.max(0, S.profiles.length - 1));
+  const keys = dxfSyncOn() ? ["root", "tip"] : [key];
+  keys.forEach(k => {
+    CFG[k].idx = idx;
+    CFG[k].name = (S.profiles[idx] || {}).name || "";
+  });
+  DXF_LAST = key;
+  dxfChanged(keys.length > 1 ? "Профиль «" + ((S.profiles[idx] || {}).name || "") + "» встал на обе башни" : "");
+}
+/* Перенос контура с одной башни на другую. */
+function dxfCopy(from, to){
+  const i = dxfIdx(from), p = S.profiles[i];
+  if(!p) return toast("На башне нет профиля");
+  CFG[to].idx = i;
+  CFG[to].name = p.name;
+  DXF_FILE[to] = DXF_FILE[from] || "";
+  dxfChanged((from === "root" ? "Левая → правая" : "Правая → левая") + ": «" + p.name + "»");
+}
+/* Размер контура в самом файле, мм. DXF и STEP приходят в реальных миллиметрах,
+   поэтому ширина контура по X — это и есть хорда. Меньше 10 мм — файл без размеров
+   (единицы не миллиметры), тогда хорда остаётся та, что в записи профиля. */
+function rawChordMM(raw){
+  if(!raw || raw.length < 4) return null;
+  let xmin = Infinity, xmax = -Infinity;
+  for(const q of raw){
+    if(q && isFinite(q[0])){ if(q[0] < xmin) xmin = q[0]; if(q[0] > xmax) xmax = q[0]; }
+  }
+  const ch = xmax - xmin;
+  if(!isFinite(ch) || ch < 10 || ch > 20000) return null;
+  return Math.round(ch * 100) / 100;
+}
+/* Загрузка файла: разбор → профиль в базе → на башню (при синхронизации — на обе). */
+async function dxfLoadTo(key){
+  const inp = $(key === "root" ? "#dxfRootFile" : "#dxfTipFile");
+  if(!inp) return;
+  const f = inp.files && inp.files[0];
+  if(!f) return;
+  let raw = null, pts = null;
+  try{
+    const txt = await f.text();          // переменная обязана называться f: сборка XP подменяет это чтение
+    raw = parseDxf(txt);
+    pts = normalizeImported(raw);
+  }catch(e){ pts = null; }
+  inp.value = "";
+  if(!pts)
+    return toast("Не распознал контур в «" + f.name + "» — нужен DXF с полилинией (LWPOLYLINE или POLYLINE)");
+
+  const base = f.name.replace(/\.[^.]+$/, "").trim() || "профиль";
+  const ch = rawChordMM(raw);            // хорда по ширине контура в файле, если файл в миллиметрах
+  let idx = -1;
+  for(let i = 0; i < S.profiles.length; i++){
+    if((S.profiles[i].name || "").trim().toLowerCase() === base.toLowerCase()){ idx = i; break; }
+  }
+  let what;
+  if(idx >= 0 && dxfSamePts(S.profiles[idx].pts, pts)){
+    // тот же контур уже в базе — дубль не плодим, но размер из файла главный
+    what = "";
+    if(ch && +S.profiles[idx].chord !== ch){
+      S.profiles[idx].chord = ch;
+      saveProfiles();
+      what = " · хорда обновлена " + ch + " мм";
+    }
+  } else {
+    const p = { name: uniqueProfileName(base), pts, src: "edit" };
+    if(ch) p.chord = ch;
+    idx = S.profiles.length;
+    addProfile(p, true);                 // addProfile сам сохраняет базу и пересобирает списки
+    what = " · хорда " + (ch ? ch + " мм из файла" : "берётся из записи");
+  }
+  const p = S.profiles[idx];
+  DXF_LAST = key;
+  const keys = dxfSyncOn() ? ["root", "tip"] : [key];
+  keys.forEach(k => {
+    CFG[k].idx = idx;
+    CFG[k].name = p.name;
+    DXF_FILE[k] = f.name;
+  });
+  let msg = "Загружено на " + (key === "root" ? "левую" : "правую") + " башню: «" + p.name + "»" + what;
+  if(keys.length > 1) msg += " · синхронно и на вторую башню";
+  dxfChanged(msg);
+}
+function renderDxf(){
+  const mp = $("#dxfPill");
+  if(mp) mp.textContent = "хорда " + profileChord(dxfIdx("root"), CFG.root.chord) +
+                          " → " + profileChord(dxfIdx("tip"), CFG.tip.chord) + " мм";
+  const sp = $("#dxfSyncPill");
+  if(sp) sp.textContent = dxfSyncOn() ? "держать вместе" : "независимо";
+  const same = dxfSameProfile();
+  const st = $("#dxfStat");
+  if(st) st.textContent = S.profiles.length ? (same ? "контуры совпадают" : "разные контуры") : "—";
+  const i1 = $("#dxfRootInfo");
+  if(i1) i1.innerHTML = dxfSideInfo("root");
+  const i2 = $("#dxfTipInfo");
+  if(i2) i2.innerHTML = dxfSideInfo("tip");
+  const inf = $("#dxfInfo");
+  if(inf){
+    inf.innerHTML =
+      "<b>Левая башня (X,Y):</b> " + dxfSideInfo("root") + "<br>" +
+      "<b>Правая башня (A,B):</b> " + dxfSideInfo("tip") + "<br>" +
+      (same
+        ? "<b>Синхронизация:</b> контуры совпадают — обе нервюры одинаковые, рез идёт прямой призмой."
+        : "<b>Синхронизация:</b> контуры разные — рез идёт по двум разным нервюрам (крыло с переменным профилем).");
+  }
+  renderDxfCanvas();
+}
+/* Оба контура в мм, наложенные друг на другу: так видно и совпадение башень,
+   и разницу в размере. Сетка — 10 мм, подписи зелёные 12 px (drawGrid). */
+function renderDxfCanvas(){
+  const cv = $("#dxfCanvas");
+  const r = setupCanvas(cv);
+  if(!r) return;                         // вкладка ещё не показана или холст не размерен
+  const { ctx, w, h } = r;
+  const ri = dxfIdx("root"), ti = dxfIdx("tip");
+  const rp = S.profiles[ri], tp = S.profiles[ti];
+  const cr = profileChord(ri, CFG.root.chord), ct = profileChord(ti, CFG.tip.chord);
+  const toMM = (p, ch) => (p && p.pts && p.pts.length) ? p.pts.map(q => [q[0] * ch, q[1] * ch]) : null;
+  const A = toMM(rp, cr), B = toMM(tp, ct);
+  const all = (A || []).concat(B || []);
+  if(all.length < 3){
+    ctx.fillStyle = "#8b9bb4"; ctx.font = "13px Segoe UI";
+    ctx.fillText("Нет профиля", 16, 26);
+    return;
+  }
+  all.push([0, 0]);
+  const map = makeMap(all, w, h, 34);
+  drawGrid(ctx, map, w, h, 1);           // сетка в миллиметрах: клетка 10 мм
+  ctx.strokeStyle = "#3a4a63"; ctx.lineWidth = 1;   // хорда y = 0 — до самой длинной нервюры
+  ctx.beginPath();
+  ctx.moveTo(map.X(0), map.Y(0));
+  ctx.lineTo(map.X(Math.max(cr, ct)), map.Y(0));
+  ctx.stroke();
+  const same = dxfSameProfile();
+  if(A) drawContour(ctx, map, A, { color: "#4ea1ff", lw: 2 });
+  if(B){
+    ctx.save();
+    if(same) ctx.setLineDash([7, 5]);    // совпали — пунктир лежит ровно на синей линии
+    drawContour(ctx, map, B, { color: same ? "#4ea1ff" : "#ffb347", lw: 2 });
+    ctx.restore();
+  }
+  ctx.font = "12px Segoe UI"; ctx.textAlign = "left"; ctx.textBaseline = "top";
+  ctx.fillStyle = "#4ea1ff";
+  ctx.fillText("левая (X,Y) — " + (rp ? rp.name : "—"), 8, 6);
+  ctx.fillStyle = same ? "#4ea1ff" : "#ffb347";
+  ctx.fillText("правая (A,B) — " + (tp ? tp.name : "—"), 8, 22);
+  ctx.textBaseline = "alphabetic";
+}
+
 /* ================= вкладки ================= */
 function switchTab(name){
   $$("#tabs button").forEach(b => b.classList.toggle("act", b.dataset.tab === name));
   $$("section.tab").forEach(s => s.classList.toggle("act", s.id === "tab-" + name));
   layoutAllCols();                 // размеры панелей новой вкладки — до отрисовки холстов
+  if(name === "cutdxf") renderDxf();   // сразу, синхронно: холст должен быть готов без ожидания кадра
   requestAnimationFrame(() => {
     if(name === "profiles"){ renderProfileList(); renderProfileCanvas(); }
     if(name === "editor"){ renderEditor(); }
     if(name === "cut"){ refreshCut(false); }
+    if(name === "cutdxf"){ renderDxf(); }
   });
 }
 
@@ -5669,6 +5939,37 @@ function init(){
   };
   $("#cShowWire").onchange = renderCut;
 
+  // пенорезка DXF: загрузка контуров по башням и синхронизация профилей
+  if($("#dxfRootBtn")) $("#dxfRootBtn").onclick = () => $("#dxfRootFile").click();
+  if($("#dxfTipBtn"))  $("#dxfTipBtn").onclick  = () => $("#dxfTipFile").click();
+  if($("#dxfRootFile")) $("#dxfRootFile").onchange = () => dxfLoadTo("root");
+  if($("#dxfTipFile"))  $("#dxfTipFile").onchange  = () => dxfLoadTo("tip");
+  ["#dxfRootProf", "#dxfTipProf"].forEach(id => {
+    const el = $(id);
+    if(!el) return;
+    el.addEventListener("change", () => dxfPick(id === "#dxfRootProf" ? "root" : "tip", +el.value || 0));
+  });
+  if($("#dxfSync")) $("#dxfSync").onchange = () => {
+    if(dxfSyncOn()){
+      const i = dxfIdx("root");
+      CFG.tip.idx = i;
+      CFG.tip.name = (S.profiles[i] || {}).name || "";
+      DXF_FILE.tip = DXF_FILE.root || "";
+      dxfChanged("Синхронизация включена — обе башни на «" + ((S.profiles[i] || {}).name || "") + "»");
+    } else {
+      dxfChanged("Синхронизация выключена — башни настраиваются отдельно");
+    }
+  };
+  if($("#dxfCopyTip"))  $("#dxfCopyTip").onclick  = () => dxfCopy("root", "tip");
+  if($("#dxfCopyRoot")) $("#dxfCopyRoot").onclick = () => dxfCopy("tip", "root");
+  if($("#dxfGen")) $("#dxfGen").onclick = () => {
+    const g = $("#cGen");
+    if(g) g.click();
+    renderDxf();
+  };
+  if($("#dxfToCut")) $("#dxfToCut").onclick = () => switchTab("cut");
+  if($("#dxfToEditor")) $("#dxfToEditor").onclick = () => openInEditor(dxfIdx(DXF_LAST));
+
   // плеер
   $("#simPlay").onclick = playPause;
   $("#simReset").onclick = simRewind;
@@ -5917,6 +6218,7 @@ function init(){
     if(t.id === "tab-profiles") renderProfileCanvas();
     if(t.id === "tab-editor") renderEditor();
     if(t.id === "tab-cut"){ renderCut(); renderSparPreview(); }
+    if(t.id === "tab-cutdxf") renderDxf();
   });
 
   syncFormFromCfg();
@@ -5951,11 +6253,21 @@ async function importFiles(files){
       const base = f.name.replace(/\.[^.]+$/, "");
       let p = null;
       if(/\.dxf$/i.test(f.name)){
-        const pts = normalizeImported(parseDxf(txt));
-        if(pts) p = { name: uniqueProfileName(base), pts, src:"edit" };
+        const raw = parseDxf(txt);
+        const pts = normalizeImported(raw);
+        if(pts){
+          p = { name: uniqueProfileName(base), pts, src:"edit" };
+          const ch = rawChordMM(raw);      // DXF в миллиметрах: хорда = ширина контура в файле
+          if(ch) p.chord = ch;
+        }
       } else if(/\.(step|stp)$/i.test(f.name)){
-        const pts = normalizeImported(parseStep(txt));
-        if(pts) p = { name: uniqueProfileName(base), pts, src:"edit" };
+        const raw = parseStep(txt);
+        const pts = normalizeImported(raw);
+        if(pts){
+          p = { name: uniqueProfileName(base), pts, src:"edit" };
+          const ch = rawChordMM(raw);
+          if(ch) p.chord = ch;
+        }
       } else {
         const q = parseDat(txt, base);
         if(q){ q.name = uniqueProfileName(q.name); p = q; }
