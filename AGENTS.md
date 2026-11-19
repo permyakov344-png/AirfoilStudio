@@ -1,0 +1,27 @@
+# Правила проекта AirfoilStudio
+
+## Синхронизация с GitHub
+
+Репозиторий: https://github.com/permyakov344-png/AirfoilStudio (private), ветка `main`.
+
+- После **любой** задачи, где менялись файлы, синхронизируй сам, без напоминания:
+  `git add -A` → `git commit -m "..."` → `git pull --rebase origin main` → `git push origin main`.
+- Не делай `git push --force` и `git reset --hard`.
+- Вручную, без OpenCode: двойной клик `tools\sync-now.cmd`.
+- Еженедельная задача Windows: `AirfoilStudio weekly backup`, понедельник 12:00.
+- Лог синхронизации: `..\AirfoilStudio_backups\weekly-backup.log`.
+
+## Что не коммитить
+
+Уже исключено в `.gitignore`: `*.zip`, `*.exe`, `_cache/`, `node_modules/`,
+`Разработка/история/снимки/`. Не добавляй эти файлы в git вручную.
+
+## Картинки
+
+Не читай `png`/`jpg` в контекст — модель по умолчанию их не поддерживает.
+Скриншоты показывай через `browser.preview`.
+
+## Проект
+
+Один автономный `index.html` без сборки и интернета. Документация — в `README.md`
+и `Разработка/` (`ЧИТАТЬ_ПЕРВЫМ.md`, `ИСТОРИЯ.md`, `АРХИТЕКТУРА.md`).
