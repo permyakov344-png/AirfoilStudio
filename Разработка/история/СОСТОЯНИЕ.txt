@@ -1,8 +1,8 @@
 ﻿Airfoil Studio — состояние архива разработки
-Обновлено: 19.11.2026 09:44
+Обновлено: 19.11.2026 09:56
 Источник: C:\Users\user\Desktop\AirfoilStudio
 Файлов в папке "программа": 6
-index.html: 680 КБ, SHA256 8655652E1C9039C6894327BA8A76B31AAF0CF334662E44CF016375282F9BAE3A
-XP-версия: 722 КБ, SHA256 CB94923728FE3E4AF2F5A2397D1FD324B0982AE4F6FF748A295E91D816793310
-Снимков: 35
-Zip: C:\Users\user\Desktop\AirfoilStudio\AirfoilStudio-Разработка.zip (51,7 МБ)
+index.html: 683 КБ, SHA256 09AB683BCD095A43B0C70A88ED7E59D6DA164E397DF0F9BB5694CF7A6779FA68
+XP-версия: 724 КБ, SHA256 6B510A448D4850FD8ABBDA9A74F123E02C2961E989ECA59A495D23B4CBC1543A
+Снимков: 40
+Zip: C:\Users\user\Desktop\AirfoilStudio\AirfoilStudio-Разработка.zip (53,7 МБ)

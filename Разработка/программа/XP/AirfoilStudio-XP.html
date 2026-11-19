@@ -347,22 +347,38 @@ table.pts tr:hover td{background:#151d29}
 
 <!-- ============================ ПЕНОРЕЗКА ============================ -->
 <section class="tab" id="tab-cut">
-  <div class="cols">
+  <div class="cols" id="cutCols">
     <div class="panel" style="width:330px;overflow:auto">
-      <div class="hd">Заготовка и концы <span class="pill" id="cPts">—</span></div>
-      <div class="hint" style="font-size:11px;line-height:1.45;margin-bottom:4px"><b>Вид и рез — со стороны
+      <div class="hd"><span id="cutSrcTitle">Заготовка и концы</span> <span class="pill" id="cPts">—</span> <span class="pill" id="dxfPill" hidden>—</span></div>
+      <div class="hint" id="cutSrcHintProf" style="font-size:11px;line-height:1.45;margin-bottom:4px"><b>Вид и рез — со стороны
         задней кромки:</b> слева корневая сторона заготовки и оси X,Y, справа концевая и оси A,B.
         Нервюры всегда стоят
         <b>на концах заготовки</b>, а башни (концы проволоки) могут быть расставлены шире её — тогда их ход
         считается как продолжение линии «корень → конец». X = 0 — торец заготовки по хорде: в нуле обе башни
         на одной координате, проволока прямая и лежит по торцу блока. Задняя кромка отстоит от торца
         на «отступ до ЗК» плюс «Сдвиг X» своего торца, передняя кромка смотрит в +X.</div>
+      <div class="hint" id="cutSrcHintDxf" hidden style="font-size:11px;line-height:1.45;margin-bottom:4px"><b>Вид и рез — со стороны
+        задней кромки:</b> слева корневая нервюра (оси X,Y), справа концевая (оси A,B). Контур грузится
+        <b>на каждую башню своей кнопкой</b> и в базу профилей не попадает. Кнопка «убрать» снимает контур —
+        башня снова режется профилем из базы. Всё остальное — как в «Пенорезке», только без лонжерона.</div>
 
       <div class="row" style="gap:4px"><b style="color:var(--acc2)">Корневая нервюра · дальний торец заготовки (слева, оси X,Y)</b></div>
-      <label class="fld"><b>Профиль</b><select id="cRootProf"></select></label>
-      <div class="hint" style="font-size:11px;line-height:1.45">Хорда нервюры — та, что задана полем
-        «Хорда профиля, мм» в редакторе и сохранена в базе вместе с профилем.
-        Если на башню загружен DXF (окно «Пенорезка DXF») — режется он, а не этот профиль.</div>
+      <div id="cutProfRoot">
+        <label class="fld"><b>Профиль</b><select id="cRootProf"></select></label>
+        <div class="hint" style="font-size:11px;line-height:1.45">Хорда нервюры — та, что задана полем
+          «Хорда профиля, мм» в редакторе и сохранена в базе вместе с профилем.</div>
+      </div>
+      <div id="dxfRootBox" hidden>
+        <div class="row" style="gap:6px">
+          <button id="dxfRootBtn" class="pri grow1" title="Выбрать файл .dxf с контуром нервюры — он станет контуром левой башни">Загрузить DXF → левая</button>
+          <input type="file" id="dxfRootFile" accept=".dxf,application/dxf" hidden>
+          <button id="dxfRootClr" class="gh" title="Убрать загруженный контур: башня снова режется профилем из базы">убрать</button>
+        </div>
+        <label class="fld"><b>размер контура, мм</b>
+          <input type="number" id="dxfRootCh" step="0.1" min="1" placeholder="из файла"
+            title="Ширина контура в файле, мм. Если в файле нет габаритов или он не в миллиметрах — задай размер вручную"></label>
+        <div class="hint" id="dxfRootInfo" style="font-size:11px;line-height:1.45">—</div>
+      </div>
       <div class="grid2">
         <label class="fld"><b>Сдвиг X</b><input type="number" id="cRootX" value="0"></label>
         <label class="fld"><b>Сдвиг Y</b><input type="number" id="cRootY" value="0"></label>
@@ -371,9 +387,22 @@ table.pts tr:hover td{background:#151d29}
 
       <div class="sep"></div>
       <div class="row" style="gap:4px"><b style="color:var(--acc)">Концевая нервюра · ближний торец заготовки (справа, оси A,B)</b></div>
-      <label class="fld"><b>Профиль</b><select id="cTipProf"></select></label>
-      <div class="hint" style="font-size:11px;line-height:1.45">Хорда концевой нервюры — тоже из редактора:
-        сохранённое поле «Хорда профиля, мм» у выбранного профиля.</div>
+      <div id="cutProfTip">
+        <label class="fld"><b>Профиль</b><select id="cTipProf"></select></label>
+        <div class="hint" style="font-size:11px;line-height:1.45">Хорда концевой нервюры — тоже из редактора:
+          сохранённое поле «Хорда профиля, мм» у выбранного профиля.</div>
+      </div>
+      <div id="dxfTipBox" hidden>
+        <div class="row" style="gap:6px">
+          <button id="dxfTipBtn" class="pri grow1" title="Выбрать файл .dxf с контуром нервюры — он станет контуром правой башни">Загрузить DXF → правая</button>
+          <input type="file" id="dxfTipFile" accept=".dxf,application/dxf" hidden>
+          <button id="dxfTipClr" class="gh" title="Убрать загруженный контур: башня снова режется профилем из базы">убрать</button>
+        </div>
+        <label class="fld"><b>размер контура, мм</b>
+          <input type="number" id="dxfTipCh" step="0.1" min="1" placeholder="из файла"
+            title="Ширина контура в файле, мм. Если в файле нет габаритов или он не в миллиметрах — задай размер вручную"></label>
+        <div class="hint" id="dxfTipInfo" style="font-size:11px;line-height:1.45">—</div>
+      </div>
       <div class="grid2">
         <label class="fld"><b>Сдвиг X</b><input type="number" id="cTeOff" value="0" step="1" title="Глубина задней кромки концевой нервюры — как «Сдвиг X» корня, но двигает только концевую нервюру. Разница с корневой = стреловидность по ЗК"></label>
         <label class="fld"><b>Сдвиг Y</b><input type="number" id="cTipY" value="0"></label>
@@ -383,6 +412,28 @@ table.pts tr:hover td{background:#151d29}
         двигать крыло целиком можно полем «от торца до ЗК». Стреловидность по ЗК = сдвиг X концевой − сдвиг X корневой:
         <b id="cSweepHint">0</b> мм. <b>0</b> — обе задние кромки на одной глубине (стреловидность только по передней кромке),
         больше нуля — концевая уходит глубже в блок. Обе нервюры всегда стоят на концах заготовки.</div>
+
+      <div id="dxfSyncBox" hidden>
+        <div class="sep"></div>
+        <div class="hd" style="font-size:12px">Синхронизация башен <span class="pill" id="dxfSyncPill">—</span></div>
+        <label class="row" style="gap:6px;color:var(--dim);font-size:12px">
+          <input type="checkbox" id="dxfSync" checked> держать башни на одном контуре
+        </label>
+        <div class="hint" style="font-size:11px;line-height:1.45">Включено: что загрузил в одну башню, встаёт и в другую —
+          обе нервюры одинаковые, рез идёт прямой призмой. Выключено: башни живут отдельно (крыло с переменным профилем),
+          а кнопки ниже переносят контур из одной башни в другую.</div>
+        <div class="row">
+          <button id="dxfCopyTip" class="grow1" title="Взять контур левой башни и поставить его на правую">левая → правая</button>
+          <button id="dxfCopyRoot" class="grow1" title="Взять контур правой башни и поставить его на левую">правая → левая</button>
+        </div>
+        <div class="sep"></div>
+        <div class="hd" style="font-size:12px">Оба торца в миллиметрах <span class="pill" id="dxfStat">—</span></div>
+        <div class="cvWrap" style="flex:0 0 220px;height:220px"><canvas id="dxfCanvas"></canvas></div>
+        <div class="hint" id="dxfInfo" style="font-size:11px;line-height:1.5">—</div>
+        <div class="hint" style="font-size:11px;line-height:1.45">Контуры наложены в натуральную величину: синяя линия —
+          левая башня (X,Y), оранжевая — правая (A,B); когда башни синхронны, они лежат друг на друге (пунктир сверху).
+          Сетка 10 мм, подписи по краям зелёные, линия y = 0 — хорда.</div>
+      </div>
 
       <button id="cMirror" class="pri" style="width:100%;margin-top:8px"
         title="Режешь правую консоль — нажми, и профили поменяются местами: то, что было слева (корневая нервюра), переедет вправо (концевая) и наоборот. Лонжерон переедет вместе с ними — получишь рез второй консоли">Правая ↔ левая консоль</button>
@@ -406,7 +457,8 @@ table.pts tr:hover td{background:#151d29}
         <input type="number" id="cBzOff" value="0" step="10" title="Насколько заготовка отодвинута от башни вдоль оси башни — отсчёт от той башни, что справа, когда стоишь за задней кромкой (это башня концевой стороны). 0 = прижата к правой башне (к концевой стороне).">
       </label>
 
-      <div class="sep"></div>
+      <div class="sep" id="cutSparSep"></div>
+      <div id="cutSparBlock">
       <div class="hd" style="font-size:12px">Лонжерон <span class="pill" id="cSparPill">нет</span></div>
       <label class="row" style="gap:6px;color:var(--dim);font-size:12px">
         <input type="checkbox" id="cSparOn"> резать полость лонжерона
@@ -465,6 +517,7 @@ table.pts tr:hover td{background:#151d29}
         проволока заходит в неё от обвода (сверху или снизу) <b>строго по вертикали — по осевой полости</b>,
         обходит контур и тем же отвесом возвращается на обвод профиля. Отдельного врезания над блоком нет.
         Если X на концах сильно отличается, сама полость идёт по косой — при общей проволоке иначе нельзя.</div>
+      </div>
 
       <div class="grid2">
         <label class="fld"><b>от торца до ЗК, мм</b><input type="number" id="cFaceOff" value="10" step="1" min="0"></label>
@@ -557,68 +610,9 @@ table.pts tr:hover td{background:#151d29}
 </section>
 
 <!-- ============================ ПЕНОРЕЗКА DXF ============================ -->
-<section class="tab" id="tab-cutdxf">
-  <div class="cols">
-    <div class="panel" style="width:410px;overflow:auto">
-      <div class="hd">Пенорезка DXF <span class="pill" id="dxfPill">—</span></div>
-      <div class="hint" style="font-size:11px;line-height:1.45">Загрузи контур <b>.dxf</b> отдельно на каждую башню:
-        слева корневая нервюра (оси X,Y), справа концевая (оси A,B). Контур идёт сразу в рез —
-        <b>в базу профилей не добавляется</b> и в списке «Профили» не появляется.</div>
-
-      <div class="row" style="gap:4px"><b style="color:var(--acc2)">Левая башня · корневая нервюра (X,Y)</b></div>
-      <div class="row" style="gap:6px">
-        <button id="dxfRootBtn" class="pri grow1" title="Выбрать файл .dxf с контуром нервюры — он станет контуром левой башни">Загрузить DXF → левая</button>
-        <input type="file" id="dxfRootFile" accept=".dxf,application/dxf" hidden>
-        <button id="dxfRootClr" class="gh" title="Убрать загруженный контур: башня снова режется профилем из базы (окно «Пенорезка»)">убрать</button>
-      </div>
-      <label class="fld"><b>размер контура, мм</b>
-        <input type="number" id="dxfRootCh" step="0.1" min="1" placeholder="из файла"
-          title="Ширина контура в файле, мм. Если в файле нет габаритов или он не в миллиметрах — задай размер вручную"></label>
-      <div class="hint" id="dxfRootInfo" style="font-size:11px;line-height:1.45">—</div>
-
-      <div class="sep"></div>
-      <div class="row" style="gap:4px"><b style="color:var(--acc)">Правая башня · концевая нервюра (A,B)</b></div>
-      <div class="row" style="gap:6px">
-        <button id="dxfTipBtn" class="pri grow1" title="Выбрать файл .dxf с контуром нервюры — он станет контуром правой башни">Загрузить DXF → правая</button>
-        <input type="file" id="dxfTipFile" accept=".dxf,application/dxf" hidden>
-        <button id="dxfTipClr" class="gh" title="Убрать загруженный контур: башня снова режется профилем из базы (окно «Пенорезка»)">убрать</button>
-      </div>
-      <label class="fld"><b>размер контура, мм</b>
-        <input type="number" id="dxfTipCh" step="0.1" min="1" placeholder="из файла"
-          title="Ширина контура в файле, мм. Если в файле нет габаритов или он не в миллиметрах — задай размер вручную"></label>
-      <div class="hint" id="dxfTipInfo" style="font-size:11px;line-height:1.45">—</div>
-
-      <div class="sep"></div>
-      <div class="hd" style="font-size:12px">Синхронизация башен <span class="pill" id="dxfSyncPill">—</span></div>
-      <label class="row" style="gap:6px;color:var(--dim);font-size:12px">
-        <input type="checkbox" id="dxfSync" checked> держать башни на одном контуре
-      </label>
-      <div class="hint" style="font-size:11px;line-height:1.45">Включено: что загрузил в одну башню, встаёт и в другую —
-        обе нервюры одинаковые, рез идёт прямой призмой. Выключено: башни живут отдельно (крыло с переменным профилем),
-        а кнопки ниже переносят контур из одной башни в другую.</div>
-      <div class="row">
-        <button id="dxfCopyTip" class="grow1" title="Взять контур левой башни и поставить его на правую">левая → правая</button>
-        <button id="dxfCopyRoot" class="grow1" title="Взять контур правой башни и поставить его на левую">правая → левая</button>
-      </div>
-
-      <div class="sep"></div>
-      <div class="row">
-        <button id="dxfToCut" class="pri grow1" title="Перейти в «Пенорезку»: там заготовка, сдвиги, симуляция и УП">К пенорезке — резать</button>
-      </div>
-      <div class="hint" style="font-size:11px;line-height:1.45">Заготовка, сдвиги торцов, параметры реза, симуляция
-        и УП — в окне <b>«Пенорезка»</b>. Здесь — только контуры на башни.</div>
-    </div>
-
-    <div class="panel grow">
-      <div class="hd">Оба торца в миллиметрах <span class="pill" id="dxfStat">—</span></div>
-      <div class="cvWrap" style="min-height:240px"><canvas id="dxfCanvas"></canvas></div>
-      <div class="hint" id="dxfInfo" style="font-size:11px;line-height:1.5">—</div>
-      <div class="hint" style="font-size:11px;line-height:1.45">Контуры наложены в натуральную величину: синяя линия —
-        левая башня (X,Y), оранжевая — правая (A,B); когда башни синхронны, они лежат друг на друге (пунктир сверху).
-        Сетка 10 мм, подписи по краям зелёные, линия y = 0 — хорда.</div>
-    </div>
-  </div>
-</section>
+<!-- Здесь тот же раздел, что и «Пенорезка»: вкладка забирает себе общий #cutCols,
+     только вместо выбора профилей показывается загрузка DXF, а лонжерон скрыт. -->
+<section class="tab" id="tab-cutdxf"></section>
 
 <!-- ============================ СТАНОК ============================ -->
 <section class="tab" id="tab-machine">
@@ -889,9 +883,13 @@ table.pts tr:hover td{background:#151d29}
         <p>Оба контура видно на холсте наложенными в натуральную величину: синяя линия — левая башня,
         оранжевая — правая; совпали — правая ложится синим пунктиром ровно на левую. Сетка 10 мм,
         подписи по краям зелёные, линия y = 0 — хорда.</p>
-        <p>Заготовка, сдвиги торцов, параметры реза, симуляция и УП живут в окне <b>«Пенорезка»</b>:
-        кнопка «К пенорезке — резать» переключает туда, и контур уже стоит своей башней.
-        Проект (`.json`) помнит и контуры DXF — они вернутся в это окно при открытии проекта.</p>
+        <p>Всё остальное в этом окне <b>такое же, как в «Пенорезке»</b>: заготовка и её размеры,
+        сдвиги и углы торцов, расстояние между башнями, параметры реза, симуляция (3D, Торцы 2D,
+        Синхронизация), УП, проект и PDF нервюр. Отличие одно — вместо выбора профиля из базы
+        контур берётся из DXF, и <b>лонжерона здесь нет</b>. Настройки у обоих окон общие:
+        переключился — и те же сдвиги, заготовка и параметры реза на месте, меняется только
+        источник контура. Проект (`.json`) помнит и контуры DXF — они вернутся в это окно
+        при открытии проекта.</p>
 
         <h3 style="margin:14px 0 6px">4. Симуляция</h3>
         <p>«Сформировать УП» не только создаёт файл, но и загружает его в симулятор: программа читает G-код обратно
@@ -3229,6 +3227,7 @@ function buildEnd(cfg, prof, N) {
 /* Список полостей лонжерона: одна (труба / прямоугольник) или две (2 прямоугольника — сверху и снизу). */
 function sparDefs() {
   var sp = CFG.spar || {};
+  if (CUT_SRC === "dxf") return []; // в «Пенорезке DXF» лонжерона нет
   if (!sp.on || sp.kind === "none") return [];
   if (sp.kind === "box2") {
     return [{
@@ -4780,38 +4779,24 @@ function buildGcode() {
 /* ================= заполнение форм ================= */
 function fillCutSelects() {
   var _loop7 = function _loop7() {
-      var _arr6$_i = _slicedToArray(_arr6[_i21], 2),
-        id = _arr6$_i[0],
-        key = _arr6$_i[1];
-      var sel = $(id);
-      if (!sel) return 0; // continue
-      sel.innerHTML = "";
-      var d = DXF[key];
-      if (d && d.pts && d.pts.length > 3) {
-        // На башне загружен DXF — режется он, а не профиль из базы. Список глушим,
-        // чтобы нельзя было выбрать профиль, который в расчёте не участвует.
-        var o = document.createElement("option");
-        o.value = "";
-        o.textContent = "DXF: " + (d.name || d.file || "загруженный контур");
-        sel.appendChild(o);
-        sel.disabled = true;
-        sel.title = "Режется контур из «Пенорезки DXF» — убрать его можно там же";
-        return 0; // continue
-      }
-      sel.disabled = false;
-      sel.title = "";
-      S.profiles.forEach((p, i) => {
-        var o = document.createElement("option");
-        o.value = i;
-        o.textContent = p.name;
-        sel.appendChild(o);
-      });
-      sel.value = clamp(CFG[key].idx, 0, Math.max(0, S.profiles.length - 1));
-    },
-    _ret2;
+    var _arr6$_i = _slicedToArray(_arr6[_i21], 2),
+      id = _arr6$_i[0],
+      key = _arr6$_i[1];
+    var sel = $(id);
+    if (!sel) return 1; // continue
+    sel.innerHTML = "";
+    sel.disabled = false;
+    sel.title = "";
+    S.profiles.forEach((p, i) => {
+      var o = document.createElement("option");
+      o.value = i;
+      o.textContent = p.name;
+      sel.appendChild(o);
+    });
+    sel.value = clamp(CFG[key].idx, 0, Math.max(0, S.profiles.length - 1));
+  };
   for (var _i21 = 0, _arr6 = [["#cRootProf", "root"], ["#cTipProf", "tip"]]; _i21 < _arr6.length; _i21++) {
-    _ret2 = _loop7();
-    if (_ret2 === 0) continue;
+    if (_loop7()) continue;
   }
 }
 
@@ -4896,15 +4881,15 @@ function syncFormFromCfg() {
   fillCutSelects();
 }
 function readCutForm() {
-  // селект выключен, когда на башне загружен DXF: индекс профиля базы не трогаем,
-  // иначе после снятия DXF рез молча переехал бы на чужой профиль
+  // Источник контура зависит от окна: в «Пенорезке» — профили из базы, в «Пенорезке DXF» —
+  // загруженные контуры (см. CUT_SRC / endProfile). Селекты профилей работают всегда.
   var rs = $("#cRootProf"),
     ts = $("#cTipProf");
-  CFG.root.idx = rs && rs.disabled ? CFG.root.idx | 0 : +rs.value || 0;
+  CFG.root.idx = rs && rs.value !== "" ? +rs.value || 0 : CFG.root.idx | 0;
   CFG.root.x = +$("#cRootX").value || 0;
   CFG.root.y = +$("#cRootY").value || 0;
   CFG.root.rot = +$("#cRootRot").value || 0;
-  CFG.tip.idx = ts && ts.disabled ? CFG.tip.idx | 0 : +ts.value || 0;
+  CFG.tip.idx = ts && ts.value !== "" ? +ts.value || 0 : CFG.tip.idx | 0;
   CFG.tip.y = +$("#cTipY").value || 0;
   CFG.tip.rot = +$("#cTipRot").value || 0;
   // имена профилей: если библиотека обновится и порядок изменится, индексы найдём по имени
@@ -5025,11 +5010,22 @@ function readMachineForm() {
 /* ================= обновление расчёта ================= */
 /* Хорда торца: у загруженного DXF — свой размер (из файла или заданный вручную),
    у профиля из базы — поле «Хорда профиля, мм» из редактора (endChord). */
+/* Размер реза окна «Пенорезка» (профили из базы) — запоминается в CFG.chordProf,
+   чтобы размер, взятый из DXF, не «протекал» в окно профилей у профилей без
+   сохранённой хорды. */
 function syncChords() {
-  var or = +CFG.root.chord || DEF_CFG.root.chord;
-  var ot = +CFG.tip.chord || DEF_CFG.tip.chord;
-  CFG.root.chord = endChord("root", or);
-  CFG.tip.chord = endChord("tip", ot);
+  var cp = CFG.chordProf || {};
+  if (CUT_SRC === "dxf") {
+    CFG.root.chord = endChord("root", +cp.root > 0 ? +cp.root : DEF_CFG.root.chord);
+    CFG.tip.chord = endChord("tip", +cp.tip > 0 ? +cp.tip : DEF_CFG.tip.chord);
+    return;
+  }
+  CFG.root.chord = endChord("root", +cp.root > 0 ? +cp.root : DEF_CFG.root.chord);
+  CFG.tip.chord = endChord("tip", +cp.tip > 0 ? +cp.tip : DEF_CFG.tip.chord);
+  CFG.chordProf = {
+    root: CFG.root.chord,
+    tip: CFG.tip.chord
+  };
 }
 function refreshCut(rebuild) {
   readCutForm();
@@ -5661,6 +5657,11 @@ function projOpen(o) {
 }
 
 /* ================= вкладка «Пенорезка DXF» =================
+   Окно целиком повторяет «Пенорезку» — тот же раздел, тот же расчёт, симуляция,
+   УП, проект и PDF; блок #cutCols переезжает между вкладками (см. switchTab).
+   Отличие одно: контур берётся из загруженного .dxf (CUT_SRC = "dxf"), а не из
+   профиля базы, и лонжерона в этом окне нет (sparDefs() возвращает []).
+
    Загрузка контура .dxf на каждую башню отдельно: слева корневая нервюра
    (оси X,Y), справа концевая (оси A,B), плюс синхронизация загруженных
    контуров. Включённая синхронизация держит обе башни на одном контуре
@@ -5701,10 +5702,15 @@ function loadDxf() {
     }
   } catch (e) {}
 }
-/* Профиль торца для расчёта: сначала загруженный в «Пенорезке DXF» контур
-   (он вне базы), иначе запись из базы профилей по индексу настройки. */
+/* Какое окно сейчас режет: "profiles" — «Пенорезка» (профили из базы),
+   "dxf" — «Пенорезка DXF» (загруженные контуры). Оба окна — один и тот же раздел
+   (#cutCols), переключается только источник контура и видимость лонжерона. */
+var CUT_SRC = "profiles";
+
+/* Профиль торца для расчёта: в «Пенорезке DXF» — загруженный контур (он вне базы),
+   в «Пенорезке» — запись из базы профилей по индексу настройки. */
 function endProfile(key) {
-  var d = DXF[key];
+  var d = CUT_SRC === "dxf" ? DXF[key] : null;
   if (d && d.pts && d.pts.length > 3) return {
     name: d.name || d.file || "DXF",
     pts: d.pts,
@@ -5717,7 +5723,7 @@ function endProfile(key) {
 /* Размер торца: из DXF (мм, как в файле либо заданный вручную), иначе из
    записи профиля, иначе — текущий размер реза. */
 function endChord(key, fb) {
-  var d = DXF[key];
+  var d = CUT_SRC === "dxf" ? DXF[key] : null;
   if (d && +d.chord > 0) return Math.round(+d.chord * 100) / 100;
   var p = endProfile(key);
   var v = p ? +p.chord : NaN;
@@ -5946,7 +5952,7 @@ function renderDxf() {
   if (c2) c2.disabled = !DXF.tip;
   var inf = $("#dxfInfo");
   if (inf) {
-    inf.innerHTML = "<b>Синхронизация:</b> " + (same ? "контуры совпадают — обе нервюры одинаковые, рез идёт прямой призмой." : "контуры разные — рез идёт по двум разным нервюрам (крыло с переменным профилем).") + "<br><b>Режется</b> то, что показано в списке окна «Пенорезка»: если DXF не загружен, башня работает с профилем из базы.";
+    inf.innerHTML = "<b>Синхронизация:</b> " + (same ? "контуры совпадают — обе нервюры одинаковые, рез идёт прямой призмой." : "контуры разные — рез идёт по двум разным нервюрам (крыло с переменным профилем).") + "<br><b>Рез</b> — в этом же окне, ниже: заготовка, сдвиги торцов, параметры реза, " + "симуляция и УП. Лонжерона здесь нет; загруженный контур в базу профилей не попадает.";
   }
   renderDxfCanvas();
 }
@@ -6009,8 +6015,43 @@ function renderDxfCanvas() {
   ctx.textBaseline = "alphabetic";
 }
 /* ================= вкладки ================= */
+/* «Пенорезка» и «Пенорезка DXF» — один и тот же раздел: общий #cutCols физически
+   переезжает в активную вкладку. Поэтому расчёт, симуляция, УП и проект работают
+   без копий и без дублей id. Отличие DXF-окна: вместо выбора профиля — загрузка
+   контура на башню, и лонжерон скрыт (в этом окне он не режется). */
+function mountCutCols(name) {
+  var cols = $("#cutCols");
+  var host = $("#tab-" + (name === "cutdxf" ? "cutdxf" : "cut"));
+  if (!cols || !host) return;
+  if (cols.parentElement !== host) host.appendChild(cols);
+}
+function setCutSrc(src) {
+  CUT_SRC = src === "dxf" ? "dxf" : "profiles";
+  var dxf = CUT_SRC === "dxf";
+  var show = (sel, on) => {
+    var e = $(sel);
+    if (e) e.hidden = !on;
+  };
+  show("#cutProfRoot", !dxf);
+  show("#cutProfTip", !dxf);
+  show("#dxfRootBox", dxf);
+  show("#dxfTipBox", dxf);
+  show("#dxfSyncBox", dxf);
+  show("#cutSparBlock", !dxf);
+  show("#cutSparSep", !dxf);
+  show("#cutSrcHintProf", !dxf);
+  show("#cutSrcHintDxf", dxf);
+  show("#cPts", !dxf);
+  show("#dxfPill", dxf);
+  var t = $("#cutSrcTitle");
+  if (t) t.textContent = dxf ? "Пенорезка DXF" : "Заготовка и концы";
+}
 function switchTab(name) {
   $$("#tabs button").forEach(b => b.classList.toggle("act", b.dataset.tab === name));
+  if (name === "cut" || name === "cutdxf") {
+    setCutSrc(name === "cutdxf" ? "dxf" : "profiles");
+    mountCutCols(name); // общий раздел переезжает в нужную вкладку
+  }
   $$("section.tab").forEach(s => s.classList.toggle("act", s.id === "tab-" + name));
   layoutAllCols(); // размеры панелей новой вкладки — до отрисовки холстов
   // Считаем и рисуем сразу, синхронно — холст должен быть готов без ожидания кадра
@@ -6020,7 +6061,11 @@ function switchTab(name) {
     renderCut();
     renderSparPreview();
   }
-  if (name === "cutdxf") renderDxf();
+  if (name === "cutdxf") {
+    refreshCut(false);
+    renderCut();
+    renderDxf();
+  }
   requestAnimationFrame(() => {
     if (name === "profiles") {
       renderProfileList();
@@ -6032,7 +6077,10 @@ function switchTab(name) {
     if (name === "cut") {
       renderCut();
     } // повторно: кадр подтвердил размеры
-    if (name === "cutdxf") renderDxf();
+    if (name === "cutdxf") {
+      renderCut();
+      renderDxf();
+    }
   });
 }
 
@@ -7876,7 +7924,6 @@ function init() {
   };
   if ($("#dxfCopyTip")) $("#dxfCopyTip").onclick = () => dxfCopy("root", "tip");
   if ($("#dxfCopyRoot")) $("#dxfCopyRoot").onclick = () => dxfCopy("tip", "root");
-  if ($("#dxfToCut")) $("#dxfToCut").onclick = () => switchTab("cut");
 
   // плеер
   $("#simPlay").onclick = playPause;
@@ -8273,6 +8320,7 @@ function init() {
       renderSparPreview();
     }
     if (t.id === "tab-cutdxf") {
+      renderCut();
       renderDxf();
     }
   });
