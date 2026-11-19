@@ -852,6 +852,10 @@ table.pts tr:hover td{background:#151d29}
         <p><b>Размер.</b> Файл из SolidWorks приходит в миллиметрах, и ширина контура в файле сразу
         становится размером реза. Если файл не в миллиметрах или ширины в нём нет — размер вписывается
         вручную в поле «размер контура, мм».</p>
+        <p><b>Какой контур берётся.</b> Внешний обвод детали. Файл из CAD можно не подчищать:
+        обвод часто порезан на много линий, полилиний и дуг, и программа собирает их в один контур,
+        а из замкнутых обводов берёт самый большой по площади. Внутренние отверстия, рамки, штампы
+        и узкие прорези от обвода к отверстию в рез не попадают.</p>
         <p><b>Синхронизация.</b> Галка «держать башни на одном контуре»: что загрузил в одну башню,
         встаёт и в другую — рез идёт прямой призмой. Выключено — крыло с разными нервюрами, а кнопки
         «левая → правая» / «правая → левая» переносят контур вручную.</p>
@@ -5382,7 +5386,15 @@ function stepText(name, pts, chord){
   return L.join("\r\n") + "\r\n";
 }
 
-/* ---- обратный разбор: контур из DXF (POLYLINE/VERTEX и LWPOLYLINE) ---- */
+/* ---- обратный разбор: контур из DXF ----
+   В файле из CAD обвод детали почти всегда порезан на десятки элементов:
+   LINE, LWPOLYLINE (дуги заданы «bulge»), ARC, CIRCLE. Поэтому контур — не
+   «самая длинная полилиния» (так в кадр попадало внутреннее отверстие), а
+   сборка всех элементов в цепочки по совпадающим концам и выбор самого
+   большого замкнутого обвода по площади. Узкие перешейки (паз/прорезь,
+   соединяющая обвод с отверстием) снимаются — остаётся внешний обвод. */
+const DXF_STEP = Math.PI / 24;            // шаг разбиения дуг, 7.5°
+
 function dxfPairs(text){
   const raw = String(text).split(/\r?\n/);
   const out = [];
@@ -5398,31 +5410,298 @@ function dxfPairs(text){
   return out;
 }
 
+/* Точки дуги между двумя вершинами по bulge (bulge = tan(угла/4)),
+   без первой вершины: она уже стоит в контуре. */
+function dxfBulgePts(p, q, b){
+  const out = [];
+  const bv = +b;
+  if(!isFinite(bv) || Math.abs(bv) < 1e-12) return out;
+  const dx = q[0] - p[0], dy = q[1] - p[1];
+  const c = Math.hypot(dx, dy);
+  if(c < 1e-12) return out;
+  const th = 4 * Math.atan(bv);                 // разворот дуги, рад (плюс — против часовой)
+  const h = (c / 2) / Math.tan(th / 2);         // смещение центра от середины хорды
+  const cx = (p[0] + q[0]) / 2 - (dy / c) * h;
+  const cy = (p[1] + q[1]) / 2 + (dx / c) * h;
+  const r = Math.hypot(p[0] - cx, p[1] - cy);
+  const a1 = Math.atan2(p[1] - cy, p[0] - cx);
+  const n = Math.max(2, Math.min(64, Math.ceil(Math.abs(th) / DXF_STEP)));
+  for(let k = 1; k < n; k++){
+    const a = a1 + th * k / n;
+    out.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
+  }
+  return out;
+}
+
+/* Точки дуги ARC/CIRCLE по центру, радиусу и углам (рад), обе крайние точки включены. */
+function dxfArcPts(cx, cy, r, a1, a2){
+  let th = a2 - a1;
+  while(th <= 0) th += Math.PI * 2;
+  const n = Math.max(2, Math.min(96, Math.ceil(th / DXF_STEP)));
+  const out = [];
+  for(let k = 0; k <= n; k++){
+    const a = a1 + th * k / n;
+    out.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
+  }
+  return out;
+}
+
+/* Вершины полилинии → плоский контур: прямые участки и дуги по bulge. */
+function dxfVertPath(vts, closed){
+  const out = [];
+  for(let i = 0; i < vts.length - 1; i++){
+    out.push([vts[i][0], vts[i][1]]);
+    if(vts[i][2]){
+      const arc = dxfBulgePts([vts[i][0], vts[i][1]], [vts[i+1][0], vts[i+1][1]], vts[i][2]);
+      for(const q of arc) out.push(q);
+    }
+  }
+  if(!vts.length) return out;
+  const L = vts[vts.length - 1];
+  out.push([L[0], L[1]]);
+  if(closed && vts.length > 2){
+    if(L[2]){
+      const arc = dxfBulgePts([L[0], L[1]], [vts[0][0], vts[0][1]], L[2]);
+      for(const q of arc) out.push(q);
+    }
+    out.push([vts[0][0], vts[0][1]]);
+  }
+  return out;
+}
+
+/* Один элемент DXF → путь точек. next — индекс следующего code 0. */
+function dxfEntity(pairs, i){
+  const type = String(pairs[i][1] || "").toUpperCase();
+  const data = [];
+  let j = i + 1;
+  while(j < pairs.length && pairs[j][0] !== 0){ data.push(pairs[j]); j++; }
+
+  const one = (code) => {
+    for(const [c, v] of data){
+      if(c === code){ const x = parseFloat(v); if(isFinite(x)) return x; }
+    }
+    return null;
+  };
+  const closed = !!((one(70) | 0) & 1);
+
+  if(type === "LINE"){
+    const x1 = one(10), y1 = one(20), x2 = one(11), y2 = one(21);
+    if(x1 === null || y1 === null || x2 === null || y2 === null) return { path: null, next: j };
+    return { path: [[x1, y1], [x2, y2]], next: j };
+  }
+  if(type === "LWPOLYLINE"){
+    const vts = [];
+    for(const [c, v] of data){
+      const x = parseFloat(v);
+      if(c === 10){
+        if(isFinite(x)) vts.push([x, 0, 0]);
+      } else if(c === 20 && vts.length){
+        if(isFinite(x)) vts[vts.length-1][1] = x;
+      } else if(c === 42 && vts.length){
+        if(isFinite(x)) vts[vts.length-1][2] = x;
+      }
+    }
+    const p = dxfVertPath(vts, closed);
+    return { path: p.length >= 2 ? p : null, next: j };
+  }
+  if(type === "POLYLINE"){
+    const vts = [];
+    let k = j;
+    while(k < pairs.length){
+      if(pairs[k][0] !== 0){ k++; continue; }
+      if(String(pairs[k][1] || "").toUpperCase() !== "VERTEX") break;
+      let vx = null, vy = null, vb = 0, m = k + 1;
+      while(m < pairs.length && pairs[m][0] !== 0){
+        const c = pairs[m][0], x = parseFloat(pairs[m][1]);
+        if(c === 10 && isFinite(x)) vx = x;
+        else if(c === 20 && isFinite(x)) vy = x;
+        else if(c === 42 && isFinite(x)) vb = x;
+        m++;
+      }
+      if(vx !== null && vy !== null) vts.push([vx, vy, vb]);
+      k = m;
+    }
+    const p = dxfVertPath(vts, closed);
+    return { path: p.length >= 2 ? p : null, next: k };
+  }
+  if(type === "ARC"){
+    const cx = one(10), cy = one(20), r = one(40), a1 = one(50), a2 = one(51);
+    if(cx === null || cy === null || r === null || a1 === null || a2 === null || !(r > 0))
+      return { path: null, next: j };
+    return { path: dxfArcPts(cx, cy, r, a1 * Math.PI / 180, a2 * Math.PI / 180), next: j };
+  }
+  if(type === "CIRCLE"){
+    const cx = one(10), cy = one(20), r = one(40);
+    if(cx === null || cy === null || r === null || !(r > 0)) return { path: null, next: j };
+    return { path: dxfArcPts(cx, cy, r, 0, Math.PI * 2), next: j };
+  }
+  return { path: null, next: j };
+}
+
+/* Площадь контура (шнурок), по модулю. */
+function dxfArea(pts){
+  let s = 0;
+  const n = pts.length;
+  for(let i = 0; i < n; i++){
+    const a = pts[i], b = pts[(i + 1) % n];
+    s += a[0] * b[1] - b[0] * a[1];
+  }
+  return Math.abs(s) / 2;
+}
+
+/* Склейка путей в цепочки по совпадающим концам (допуск tol). */
+function dxfJoin(paths, tol){
+  const live = paths.map(p => p.slice()).filter(p => p.length >= 2);
+  if(live.length < 2) return live;
+
+  const cell = Math.max(tol, 1e-9) * 2;
+  const keyOf = (x, y) => Math.round(x / cell) + "," + Math.round(y / cell);
+  const ends = new Map();
+  const busy = new Array(live.length).fill(false);
+
+  function reg(idx){
+    const p = live[idx];
+    const pts = [p[0], p[p.length - 1]];
+    for(let s = 0; s < 2; s++){
+      const k = keyOf(pts[s][0], pts[s][1]);
+      if(!ends.has(k)) ends.set(k, []);
+      ends.get(k).push({ i: idx, s });
+    }
+  }
+  /* Ближайший свободный конец в пределах допуска: продолжение обвода всегда
+     точнее случайного соседнего конца, поэтому берём минимум расстояния. */
+  function find(q, self){
+    const cx = Math.round(q[0] / cell), cy = Math.round(q[1] / cell);
+    let best = null, bd = Infinity;
+    for(let dx = -1; dx <= 1; dx++){
+      for(let dy = -1; dy <= 1; dy++){
+        const arr = ends.get((cx + dx) + "," + (cy + dy));
+        if(!arr) continue;
+        for(const e of arr){
+          if(e.i === self || busy[e.i]) continue;
+          const p = live[e.i];
+          const pt = e.s ? p[p.length - 1] : p[0];
+          const d = Math.hypot(pt[0] - q[0], pt[1] - q[1]);
+          if(d <= tol && d < bd){ bd = d; best = e; }
+        }
+      }
+    }
+    return best;
+  }
+
+  for(let i = 0; i < live.length; i++) reg(i);
+
+  for(let i = 0; i < live.length; i++){
+    if(busy[i]) continue;
+    for(let dir = 0; dir < 2; dir++){
+      for(let guard = 0; guard < 20000; guard++){
+        const p = live[i];
+        const q = dir ? p[p.length - 1] : p[0];
+        const e = find(q, i);
+        if(!e) break;
+        let B = live[e.i];
+        if(dir === 0){
+          if(e.s === 0) B = B.slice().reverse();       // конец B должен лечь на начало A
+          live[i] = B.slice(0, -1).concat(p);
+        } else {
+          if(e.s === 1) B = B.slice().reverse();       // начало B должно лечь на конец A
+          live[i] = p.concat(B.slice(1));
+        }
+        busy[e.i] = true;
+        reg(i);
+      }
+    }
+  }
+  return live.filter((p, i) => !busy[i] && p.length >= 2);
+}
+
+/* Узкий перешеек (прорезь от обвода к отверстию) снимается: из двух частей
+   остаётся та, где площадь больше. Перешеек уже 2 % габарита, и обе части
+   должны быть заметными — иначе это не перешеек, а тонкая кромка (ЗК). */
+function dxfTrimNeck(pts, diag){
+  let p = pts.slice();
+  if(p.length > 1){
+    const a = p[0], b = p[p.length - 1];
+    if(Math.hypot(a[0] - b[0], a[1] - b[1]) <= diag * 1e-6) p.pop();
+  }
+  const neck = diag * 0.02;
+  for(let guard = 0; guard < 8; guard++){
+    const n = p.length;
+    if(n < 8) break;
+    let bi = -1, bj = -1, bd = Infinity;
+    for(let i = 0; i < n; i++){
+      for(let j = i + 2; j < n; j++){
+        if(i === 0 && j === n - 1) continue;
+        const d = Math.hypot(p[i][0] - p[j][0], p[i][1] - p[j][1]);
+        if(d < neck && d < bd){ bd = d; bi = i; bj = j; }
+      }
+    }
+    if(bi < 0) break;
+    const A = p.slice(bi, bj + 1);
+    const B = p.slice(bj).concat(p.slice(0, bi + 1));
+    const aa = dxfArea(A), ab = dxfArea(B);
+    const tot = aa + ab;
+    if(!(tot > 0) || Math.min(aa, ab) < tot * 0.05) break;
+    p = aa >= ab ? A : B;
+  }
+  return p;
+}
+
+/* Все пути файла → контур детали: внешний обвод по площади. */
+function dxfOutline(paths){
+  const clean = [];
+  for(const p of paths){
+    if(!p || !Array.isArray(p)) continue;
+    const q = p.filter(z => Array.isArray(z) && isFinite(z[0]) && isFinite(z[1]));
+    if(q.length >= 2) clean.push(q);
+  }
+  if(!clean.length) return null;
+
+  let xmin = Infinity, xmax = -Infinity, ymin = Infinity, ymax = -Infinity;
+  for(const p of clean){
+    for(const q of p){
+      if(q[0] < xmin) xmin = q[0];
+      if(q[0] > xmax) xmax = q[0];
+      if(q[1] < ymin) ymin = q[1];
+      if(q[1] > ymax) ymax = q[1];
+    }
+  }
+  if(!isFinite(xmin + xmax + ymin + ymax))
+    return clean.sort((a, b) => b.length - a.length)[0] || null;
+
+  const diag = Math.hypot(xmax - xmin, ymax - ymin) || 1;
+  let best = null;
+  for(const ch of dxfJoin(clean, diag * 0.0015)){
+    const loop = dxfTrimNeck(ch, diag);
+    if(loop.length < 3) continue;
+    const a = dxfArea(loop);
+    if(!best || a > best.a) best = { a, pts: loop };
+  }
+  return best ? best.pts : null;
+}
+
+/* Разбор DXF → точки внешнего контура детали (в единицах файла).
+   Читается только раздел ENTITIES; блоки (рамки, штампы) не берутся. */
 function parseDxf(text){
   const pairs = dxfPairs(text);
-  const polys = [];
-  let cur = null, ent = "", vert = false;
-  for(const [code, val] of pairs){
+  const paths = [];
+  let section = "", needName = false;
+  for(let i = 0; i < pairs.length; i++){
+    const code = pairs[i][0], val = String(pairs[i][1] || "").trim();
     if(code === 0){
-      ent = val.toUpperCase();
-      if(ent === "POLYLINE"){ cur = []; polys.push(cur); vert = false; }
-      else if(ent === "LWPOLYLINE"){ cur = []; polys.push(cur); vert = true; }
-      else if(ent === "VERTEX"){ if(!cur){ cur = []; polys.push(cur); } vert = false; }
-      else cur = null;
+      const t = val.toUpperCase();
+      if(t === "SECTION"){ section = ""; needName = true; }
+      else if(t === "ENDSEC"){ section = ""; needName = false; }
+      else if(section === "ENTITIES" || section === ""){
+        const e = dxfEntity(pairs, i);
+        if(e.path && e.path.length >= 2) paths.push(e.path);
+        if(e.next > i + 1) i = e.next - 1;
+      }
       continue;
     }
-    if(!cur) continue;
-    if(ent === "VERTEX" || ent === "LWPOLYLINE"){
-      if(code === 10) cur.push([parseFloat(val), 0]);
-      else if(code === 20 && cur.length) cur[cur.length-1][1] = parseFloat(val);
-    }
+    if(needName && code === 2){ section = val.toUpperCase(); needName = false; }
   }
-  let best = null;
-  for(const p of polys){
-    const clean = p.filter(q => isFinite(q[0]) && isFinite(q[1]));
-    if(clean.length >= 3 && (!best || clean.length > best.length)) best = clean;
-  }
-  return best;
+  return dxfOutline(paths);
 }
 
 /* ---- обратный разбор: точки из STEP (POLYLINE, иначе все CARTESIAN_POINT) ---- */
