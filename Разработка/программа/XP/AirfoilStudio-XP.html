@@ -348,47 +348,66 @@ table.pts tr:hover td{background:#151d29}
 <!-- ============================ ПЕНОРЕЗКА ============================ -->
 <section class="tab" id="tab-cut">
   <div class="cols">
-    <div class="panel" style="width:390px;overflow:auto">
-      <div class="hd">Профили нервюр</div>
-      <div class="hint" style="font-size:11px;line-height:1.45;margin-bottom:4px">Здесь выбираются <b>профили</b>
-        корня и конца из базы и настраивается <b>лонжерон</b>. Настройки реза, заготовка, симуляция и УП —
-        в окне <b>«Пенорезка DXF»</b>.</div>
+    <div class="panel" style="width:330px;overflow:auto">
+      <div class="hd">Заготовка и концы <span class="pill" id="cPts">—</span></div>
+      <div class="hint" style="font-size:11px;line-height:1.45;margin-bottom:4px"><b>Вид и рез — со стороны
+        задней кромки:</b> слева корневая сторона заготовки и оси X,Y, справа концевая и оси A,B.
+        Нервюры всегда стоят
+        <b>на концах заготовки</b>, а башни (концы проволоки) могут быть расставлены шире её — тогда их ход
+        считается как продолжение линии «корень → конец». X = 0 — торец заготовки по хорде: в нуле обе башни
+        на одной координате, проволока прямая и лежит по торцу блока. Задняя кромка отстоит от торца
+        на «отступ до ЗК» плюс «Сдвиг X» своего торца, передняя кромка смотрит в +X.</div>
 
       <div class="row" style="gap:4px"><b style="color:var(--acc2)">Корневая нервюра · дальний торец заготовки (слева, оси X,Y)</b></div>
       <label class="fld"><b>Профиль</b><select id="cRootProf"></select></label>
       <div class="hint" style="font-size:11px;line-height:1.45">Хорда нервюры — та, что задана полем
         «Хорда профиля, мм» в редакторе и сохранена в базе вместе с профилем.
         Если на башню загружен DXF (окно «Пенорезка DXF») — режется он, а не этот профиль.</div>
+      <div class="grid2">
+        <label class="fld"><b>Сдвиг X</b><input type="number" id="cRootX" value="0"></label>
+        <label class="fld"><b>Сдвиг Y</b><input type="number" id="cRootY" value="0"></label>
+      </div>
+      <label class="fld"><b>Угол установки, °</b><input type="number" id="cRootRot" value="0" step="0.5"></label>
 
       <div class="sep"></div>
       <div class="row" style="gap:4px"><b style="color:var(--acc)">Концевая нервюра · ближний торец заготовки (справа, оси A,B)</b></div>
       <label class="fld"><b>Профиль</b><select id="cTipProf"></select></label>
       <div class="hint" style="font-size:11px;line-height:1.45">Хорда концевой нервюры — тоже из редактора:
         сохранённое поле «Хорда профиля, мм» у выбранного профиля.</div>
+      <div class="grid2">
+        <label class="fld"><b>Сдвиг X</b><input type="number" id="cTeOff" value="0" step="1" title="Глубина задней кромки концевой нервюры — как «Сдвиг X» корня, но двигает только концевую нервюру. Разница с корневой = стреловидность по ЗК"></label>
+        <label class="fld"><b>Сдвиг Y</b><input type="number" id="cTipY" value="0"></label>
+      </div>
+      <label class="fld"><b>Угол установки, °</b><input type="number" id="cTipRot" value="0" step="0.5"></label>
+      <div class="hint" style="font-size:11px;line-height:1.45">Каждый «Сдвиг X» двигает <b>только свою нервюру</b> —
+        двигать крыло целиком можно полем «от торца до ЗК». Стреловидность по ЗК = сдвиг X концевой − сдвиг X корневой:
+        <b id="cSweepHint">0</b> мм. <b>0</b> — обе задние кромки на одной глубине (стреловидность только по передней кромке),
+        больше нуля — концевая уходит глубже в блок. Обе нервюры всегда стоят на концах заготовки.</div>
 
       <button id="cMirror" class="pri" style="width:100%;margin-top:8px"
-        title="Режешь правую консоль — нажми, и профили поменяются местами: то, что было слева (корневая нервюра), переедет вправо (концевая) и наоборот. Лонжерон, сдвиги и загруженные DXF переедут вместе с ними — получишь рез второй консоли">Правая ↔ левая консоль</button>
-      <div class="hint" style="font-size:11px;line-height:1.45">Меняет местами профили, лонжерон, сдвиги торцов
-        и загруженные контуры DXF: получишь рез второй консоли.</div>
+        title="Режешь правую консоль — нажми, и профили поменяются местами: то, что было слева (корневая нервюра), переедет вправо (концевая) и наоборот. Лонжерон переедет вместе с ними — получишь рез второй консоли">Правая ↔ левая консоль</button>
 
       <div class="sep"></div>
-      <div class="row">
-        <button id="cPrjSave" class="grow1" title="Сохранить в файл всё, из чего собирается рез: профили корня и конца с координатами, хорды, контуры DXF, лонжерон (тип, размеры, X и Y до него на каждом торце), заготовку и параметры реза. Настройки станка в проект не входят.">Сохранить проект</button>
-        <button id="cPrjOpen" title="Открыть сохранённый проект — вернутся профили, хорды, контуры DXF, лонжерон (размеры до него) и все размеры заготовки">Открыть проект</button>
-        <input type="file" id="cPrjFile" accept=".json,application/json" hidden>
+      <label class="fld"><b>Расстояние между башнями, мм (100…1500)</b>
+        <input type="number" id="cSpan" value="800" min="100" max="1500" step="10">
+      </label>
+      <div class="hint" id="cSpanHint" style="font-size:11px;line-height:1.45"></div>
+      <div class="sep"></div>
+      <div class="hd" style="font-size:12px">Заготовка, мм <span class="pill" id="cBlkPill">—</span></div>
+      <div class="hint" style="font-size:11px;line-height:1.45;margin-bottom:4px">Длина — это и есть расстояние
+        между нервюрами: концевая стоит на ближнем торце (справа, у башни A,B),
+        корневая — на дальнем (слева, у башни X,Y).</div>
+      <div class="grid3">
+        <label class="fld"><b>длина</b><input type="number" id="cBl" value="800" step="10" min="10"></label>
+        <label class="fld"><b>ширина</b><input type="number" id="cBw" value="400" step="10" min="10"></label>
+        <label class="fld"><b>высота</b><input type="number" id="cBh" value="250" step="10" min="10"></label>
       </div>
-      <div class="hint" style="font-size:11px;line-height:1.45">Проект помнит <b>деталь</b>: профили и хорды,
-        контуры DXF (они возвращаются в «Пенорезку DXF», а не в базу), лонжерон с размерами и положением,
-        заготовку и рез. Настройки станка в проект не входят — они от детали не зависят.</div>
-      <div class="row">
-        <button id="cRibPdf" class="grow1" title="PDF на две страницы: нервюра и вырезы лонжерона в натуральную величину. Печатай в масштабе 100 %, без «вписать в страницу»">Шаблон нервюр 1:1 (PDF)</button>
-      </div>
-      <div class="hint" style="font-size:11px;line-height:1.45">Собрать УП и посмотреть симуляцию реза —
-        в окне <b>«Пенорезка DXF»</b>.</div>
-    </div>
+      <label class="fld"><b>смещение заготовки от правой башни, мм</b>
+        <input type="number" id="cBzOff" value="0" step="10" title="Насколько заготовка отодвинута от башни вдоль оси башни — отсчёт от той башни, что справа, когда стоишь за задней кромкой (это башня концевой стороны). 0 = прижата к правой башне (к концевой стороне).">
+      </label>
 
-    <div class="panel grow">
-      <div class="hd">Лонжерон <span class="pill" id="cSparPill">нет</span></div>
+      <div class="sep"></div>
+      <div class="hd" style="font-size:12px">Лонжерон <span class="pill" id="cSparPill">нет</span></div>
       <label class="row" style="gap:6px;color:var(--dim);font-size:12px">
         <input type="checkbox" id="cSparOn"> резать полость лонжерона
       </label>
@@ -418,7 +437,7 @@ table.pts tr:hover td{background:#151d29}
 
       <div class="hint" style="font-size:11px;margin-top:2px">Положение на каждой нервюре — от её передней кромки (X).
         Для «2 прямоугольников» Y — <b>отступ от обвода своего контура</b>: верхний цепляется от верхнего обвода профиля,
-        нижний — от нижнего (0 — вплотную к поверхности). Если на башню загружен DXF — отступы считаются от него.</div>
+        нижний — от нижнего (0 — вплотную к поверхности).</div>
       <div class="hint" id="sparHdr1" style="display:none;font-size:11px;color:var(--acc2)">верхний прямоугольник</div>
       <div class="grid2">
         <label class="fld"><b>X корень, мм от ПК</b><input type="number" id="cSparXR" value="84" step="1" min="1"></label>
@@ -446,6 +465,93 @@ table.pts tr:hover td{background:#151d29}
         проволока заходит в неё от обвода (сверху или снизу) <b>строго по вертикали — по осевой полости</b>,
         обходит контур и тем же отвесом возвращается на обвод профиля. Отдельного врезания над блоком нет.
         Если X на концах сильно отличается, сама полость идёт по косой — при общей проволоке иначе нельзя.</div>
+
+      <div class="grid2">
+        <label class="fld"><b>от торца до ЗК, мм</b><input type="number" id="cFaceOff" value="10" step="1" min="0"></label>
+        <label class="fld" title="Проволока после реза отезжает назад вдоль Y. 0 — не отезжает, контур после обвода сразу остаётся у задней кромки."><b>отъезд назад, мм</b><input type="number" id="cLead" value="0" step="1" min="0"></label>
+        <label class="fld" title="Диаметр нихромовой проволоки. Проволока вырезает канал шириной с себя, поэтому контур смещается наружу на радиус проволоки."><b>Ø проволоки, мм</b><input type="number" id="cWireD" value="0.4" step="0.05" min="0"></label>
+        <label class="fld" title="Прибавка на проплавление сверх диаметра проволоки (обычно 0)."><b>прибавка, мм</b><input type="number" id="cKerf" value="0" step="0.05" min="0"></label>
+        <label class="fld"><b>Шаг аппрокс., мм</b><input type="number" id="cStep" value="2" step="0.5" min="0.2"></label>
+        <label class="fld"><b>Подача, мм/мин</b><input type="number" id="cFeed" value="150" step="10" min="10"></label>
+      </div>
+      <div class="sep"></div>
+      <div class="row">
+        <button id="cPrjSave" class="grow1" title="Сохранить в файл всё, из чего собирается рез: профили корня и конца с координатами, хорды, контуры DXF, лонжерон (тип, размеры, X и Y до него на каждом торце), заготовку и параметры реза. Настройки станка в проект не входят.">Сохранить проект</button>
+        <button id="cPrjOpen" title="Открыть сохранённый проект — вернутся профили, хорды, контуры DXF, лонжерон (размеры до него) и все размеры заготовки">Открыть проект</button>
+        <input type="file" id="cPrjFile" accept=".json,application/json" hidden>
+      </div>
+      <div class="hint" style="font-size:11px;line-height:1.45">Проект помнит <b>деталь</b>: профили и хорды,
+        лонжерон с размерами и положением (X и Y до него на каждом торце), заготовку и рез, а контуры DXF
+        возвращаются в окно <b>«Пенорезка DXF»</b> — в базу профилей они не попадают. Настройки станка в проект
+        не входят — они от детали не зависят.</div>
+      <div class="row">
+        <button id="cGen" class="pri grow1">Сформировать УП</button>
+        <button id="cSaveTap">Скачать .tap</button>
+      </div>
+      <div class="row">
+        <button id="cRibPdf" class="grow1" title="PDF на две страницы: нервюра и вырезы лонжерона в натуральную величину. Печатай в масштабе 100 %, без «вписать в страницу»">Шаблон нервюр 1:1 (PDF)</button>
+      </div>
+      <label class="row" style="gap:6px;color:var(--dim);font-size:12px">
+        <input type="checkbox" id="cShowWire" checked> показывать проволоку на превью
+      </label>
+      <div class="hint" id="cWarn"></div>
+    </div>
+
+    <div class="panel grow">
+      <div class="hd">Симуляция <span class="pill" id="cStat">—</span>
+        <span class="grow1"></span>
+        <button id="v3d" class="mini act">3D</button>
+        <button id="v2d" class="mini">Торцы 2D</button>
+        <button id="vSync" class="mini" title="Вид со стороны проволоки: обе башни идут вместе, а линия проволоки видна только когда контуры расходятся">Синхронизация</button>
+      </div>
+      <div class="row" id="vTools" style="flex-wrap:wrap;gap:6px">
+        <button id="vZoomOut" class="mini" style="width:28px;padding:0"
+          title="Отдалить. В «Торцах 2D» — только тот торец, где стоит курсор">−</button>
+        <button id="vZoomIn" class="mini" style="width:28px;padding:0"
+          title="Приблизить. В «Торцах 2D» — только тот торец, где стоит курсор">+</button>
+        <span class="pill" id="vZoomL" style="cursor:pointer;display:none"
+          title="Масштаб левой башни — щёлкни, чтобы вернуть ×1">лев. ×1.00</span>
+        <span class="pill" id="vZoomR" style="cursor:pointer;display:none"
+          title="Масштаб правой башни — щёлкни, чтобы вернуть ×1">прав. ×1.00</span>
+        <span class="pill" id="vZoom3d" style="cursor:pointer;display:none"
+          title="Масштаб 3D — щёлкни, чтобы вернуть ×1">×1.00</span>
+        <label class="hint" id="vFollowLbl" style="display:flex;gap:5px;align-items:center;margin-left:auto"
+          title="При увеличении держать текущий рез в центре своего торца">
+          <input type="checkbox" id="vFollow" checked> следить за резом
+        </label>
+        <button id="vResetView" class="mini" title="Вернуть масштаб и вид (двойной щелчок по полю)">Сброс</button>
+      </div>
+      <div class="cvWrap" style="min-height:180px"><canvas id="cutCanvas"></canvas></div>
+      <div class="row">
+        <button id="simPlay" class="pri" style="width:46px;flex:0 0 46px" title="Пробел — пуск/пауза">▶</button>
+        <button id="simReset" class="gh" style="flex:0 0 auto" title="В начало">⟲</button>
+        <input type="range" id="cScrub" min="0" max="1000" value="0" step="1" style="flex:1 1 auto">
+        <select id="simSpeed" style="width:80px;flex:0 0 80px">
+          <option value="0.25">0.25×</option>
+          <option value="0.5">0.5×</option>
+          <option value="1" selected>1×</option>
+          <option value="2">2×</option>
+          <option value="5">5×</option>
+          <option value="10">10×</option>
+        </select>
+      </div>
+      <div class="row">
+        <span class="hint mono" id="cScrubLbl">0 % · 0.0 мм · 00:00</span>
+        <span class="grow1"></span>
+        <span class="badge" id="cBadgeLen">—</span>
+        <span class="badge" id="cBadgeTime">—</span>
+        <span class="badge" id="cBadgeSpan">—</span>
+      </div>
+      <div class="hint" id="cSimSrc">—</div>
+      <div class="hint" id="vHint">Колесо мыши — зум · перетаскивание — сдвиг (в 3D — поворот, с Shift — сдвиг) ·
+        двойной щелчок — вернуть вид. В «Торцах 2D» каждая башня (левая и правая) увеличивается отдельно —
+        приближается только та, над которой стоит курсор. Сетка — 10 мм, размеры по краям — в миллиметрах.</div>
+    </div>
+
+    <div class="panel" style="width:380px">
+      <div class="hd">Управляющая программа <button id="cCopy" class="gh" style="margin-left:auto">Копировать</button></div>
+      <textarea id="cGcode" class="txt mono" spellcheck="false" placeholder="Нажми «Сформировать УП»"></textarea>
+      <div class="hint" id="cGcodeInfo">—</div>
     </div>
   </div>
 </section>
@@ -454,7 +560,7 @@ table.pts tr:hover td{background:#151d29}
 <section class="tab" id="tab-cutdxf">
   <div class="cols">
     <div class="panel" style="width:410px;overflow:auto">
-      <div class="hd">Пенорезка DXF <span class="pill" id="dxfPill">—</span><span class="pill" id="cPts">—</span></div>
+      <div class="hd">Пенорезка DXF <span class="pill" id="dxfPill">—</span></div>
       <div class="hint" style="font-size:11px;line-height:1.45">Загрузи контур <b>.dxf</b> отдельно на каждую башню:
         слева корневая нервюра (оси X,Y), справа концевая (оси A,B). Контур идёт сразу в рез —
         <b>в базу профилей не добавляется</b> и в списке «Профили» не появляется.</div>
@@ -483,153 +589,37 @@ table.pts tr:hover td{background:#151d29}
       <div class="hint" id="dxfTipInfo" style="font-size:11px;line-height:1.45">—</div>
 
       <div class="sep"></div>
-      <div class="hd" style="font-size:12px">Синхронизация башен <span class="pill" id="dxfSyncPill">—</span><span class="pill" id="dxfStat">—</span></div>
+      <div class="hd" style="font-size:12px">Синхронизация башен <span class="pill" id="dxfSyncPill">—</span></div>
       <label class="row" style="gap:6px;color:var(--dim);font-size:12px">
         <input type="checkbox" id="dxfSync" checked> держать башни на одном контуре
       </label>
       <div class="hint" style="font-size:11px;line-height:1.45">Включено: что загрузил в одну башню, встаёт и в другую —
         обе нервюры одинаковые, рез идёт прямой призмой. Выключено: башни живут отдельно (крыло с переменным профилем),
-        а кнопки ниже переносят контур из одной башни в другую. Как идёт синхронный рез — смотри в панели
-        <b>«Симуляция» → «Синхронизация»</b>.</div>
+        а кнопки ниже переносят контур из одной башни в другую.</div>
       <div class="row">
         <button id="dxfCopyTip" class="grow1" title="Взять контур левой башни и поставить его на правую">левая → правая</button>
         <button id="dxfCopyRoot" class="grow1" title="Взять контур правой башни и поставить его на левую">правая → левая</button>
       </div>
 
       <div class="sep"></div>
-      <div class="hd" style="font-size:12px">Настройки реза</div>
-      <div class="hint" style="font-size:11px;line-height:1.45;margin-bottom:4px"><b>Вид и рез — со стороны
-        задней кромки:</b> слева корневая сторона заготовки и оси X,Y, справа концевая и оси A,B.
-        Нервюры всегда стоят <b>на концах заготовки</b>, а башни (концы проволоки) могут быть расставлены шире её —
-        тогда их ход считается как продолжение линии «корень → конец». X = 0 — торец заготовки по хорде:
-        в нуле обе башни на одной координате, проволока прямая и лежит по торцу блока. Задняя кромка отстоит
-        от торца на «отступ до ЗК» плюс «Сдвиг X» своего торца, передняя кромка смотрит в +X.</div>
-
-      <div class="row" style="gap:4px"><b style="color:var(--acc2)">Корневая нервюра · дальний торец (слева, оси X,Y)</b></div>
-      <div class="grid2">
-        <label class="fld"><b>Сдвиг X</b><input type="number" id="cRootX" value="0"></label>
-        <label class="fld"><b>Сдвиг Y</b><input type="number" id="cRootY" value="0"></label>
-      </div>
-      <label class="fld"><b>Угол установки, °</b><input type="number" id="cRootRot" value="0" step="0.5"></label>
-
-      <div class="sep"></div>
-      <div class="row" style="gap:4px"><b style="color:var(--acc)">Концевая нервюра · ближний торец (справа, оси A,B)</b></div>
-      <div class="grid2">
-        <label class="fld"><b>Сдвиг X</b><input type="number" id="cTeOff" value="0" step="1" title="Глубина задней кромки концевой нервюры — как «Сдвиг X» корня, но двигает только концевую нервюру. Разница с корневой = стреловидность по ЗК"></label>
-        <label class="fld"><b>Сдвиг Y</b><input type="number" id="cTipY" value="0"></label>
-      </div>
-      <label class="fld"><b>Угол установки, °</b><input type="number" id="cTipRot" value="0" step="0.5"></label>
-      <div class="hint" style="font-size:11px;line-height:1.45">Каждый «Сдвиг X» двигает <b>только свою нервюру</b> —
-        двигать крыло целиком можно полем «от торца до ЗК». Стреловидность по ЗК = сдвиг X концевой − сдвиг X корневой:
-        <b id="cSweepHint">0</b> мм. <b>0</b> — обе задние кромки на одной глубине (стреловидность только по передней кромке),
-        больше нуля — концевая уходит глубже в блок. Обе нервюры всегда стоят на концах заготовки.</div>
-
-      <div class="sep"></div>
-      <label class="fld"><b>Расстояние между башнями, мм (100…1500)</b>
-        <input type="number" id="cSpan" value="800" min="100" max="1500" step="10">
-      </label>
-      <div class="hint" id="cSpanHint" style="font-size:11px;line-height:1.45"></div>
-
-      <div class="sep"></div>
-      <div class="hd" style="font-size:12px">Заготовка, мм <span class="pill" id="cBlkPill">—</span></div>
-      <div class="hint" style="font-size:11px;line-height:1.45;margin-bottom:4px">Длина — это и есть расстояние
-        между нервюрами: концевая стоит на ближнем торце (справа, у башни A,B),
-        корневая — на дальнем (слева, у башни X,Y).</div>
-      <div class="grid3">
-        <label class="fld"><b>длина</b><input type="number" id="cBl" value="800" step="10" min="10"></label>
-        <label class="fld"><b>ширина</b><input type="number" id="cBw" value="400" step="10" min="10"></label>
-        <label class="fld"><b>высота</b><input type="number" id="cBh" value="250" step="10" min="10"></label>
-      </div>
-      <label class="fld"><b>смещение заготовки от правой башни, мм</b>
-        <input type="number" id="cBzOff" value="0" step="10" title="Насколько заготовка отодвинута от башни вдоль оси башни — отсчёт от той башни, что справа, когда стоишь за задней кромкой (это башня концевой стороны). 0 = прижата к правой башне (к концевой стороне).">
-      </label>
-
-      <div class="sep"></div>
-      <div class="hd" style="font-size:12px">Параметры реза</div>
-      <div class="grid2">
-        <label class="fld"><b>от торца до ЗК, мм</b><input type="number" id="cFaceOff" value="10" step="1" min="0"></label>
-        <label class="fld" title="Проволока после реза отезжает назад вдоль Y. 0 — не отезжает, контур после обвода сразу остаётся у задней кромки."><b>отъезд назад, мм</b><input type="number" id="cLead" value="0" step="1" min="0"></label>
-        <label class="fld" title="Диаметр нихромовой проволоки. Проволока вырезает канал шириной с себя, поэтому контур смещается наружу на радиус проволоки."><b>Ø проволоки, мм</b><input type="number" id="cWireD" value="0.4" step="0.05" min="0"></label>
-        <label class="fld" title="Прибавка на проплавление сверх диаметра проволоки (обычно 0)."><b>прибавка, мм</b><input type="number" id="cKerf" value="0" step="0.05" min="0"></label>
-        <label class="fld"><b>Шаг аппрокс., мм</b><input type="number" id="cStep" value="2" step="0.5" min="0.2"></label>
-        <label class="fld"><b>Подача, мм/мин</b><input type="number" id="cFeed" value="150" step="10" min="10"></label>
-      </div>
-
-      <div class="sep"></div>
-      <div class="hint" id="cWarn"></div>
       <div class="row">
-        <button id="dxfToCut" class="grow1" title="Перейти к выбору профилей нервюр и настройке лонжерона">К пенорезке — профили и лонжерон</button>
+        <button id="dxfToCut" class="pri grow1" title="Перейти в «Пенорезку»: там заготовка, сдвиги, симуляция и УП">К пенорезке — резать</button>
       </div>
-      <div class="hint" id="dxfInfo" style="font-size:11px;line-height:1.5">—</div>
+      <div class="hint" style="font-size:11px;line-height:1.45">Заготовка, сдвиги торцов, параметры реза, симуляция
+        и УП — в окне <b>«Пенорезка»</b>. Здесь — только контуры на башни.</div>
     </div>
 
     <div class="panel grow">
-      <div class="hd">Симуляция <span class="pill" id="cStat">—</span>
-        <span class="grow1"></span>
-        <button id="v3d" class="mini act">3D</button>
-        <button id="v2d" class="mini">Торцы 2D</button>
-        <button id="vSync" class="mini">Синхронизация</button>
-      </div>
-      <div class="row" id="vTools" style="flex-wrap:wrap;gap:6px">
-        <button id="vZoomOut" class="mini" style="width:28px;padding:0"
-          title="Отдалить. В «Торцах 2D» — только тот торец, где стоит курсор">−</button>
-        <button id="vZoomIn" class="mini" style="width:28px;padding:0"
-          title="Приблизить. В «Торцах 2D» — только тот торец, где стоит курсор">+</button>
-        <span class="pill" id="vZoomL" style="cursor:pointer;display:none"
-          title="Масштаб левой башни — щёлкни, чтобы вернуть ×1">лев. ×1.00</span>
-        <span class="pill" id="vZoomR" style="cursor:pointer;display:none"
-          title="Масштаб правой башни — щёлкни, чтобы вернуть ×1">прав. ×1.00</span>
-        <span class="pill" id="vZoom3d" style="cursor:pointer;display:none"
-          title="Масштаб вида — щёлкни, чтобы вернуть ×1">×1.00</span>
-        <label class="hint" id="vFollowLbl" style="display:flex;gap:5px;align-items:center;margin-left:auto"
-          title="При увеличении держать текущий рез в центре своего торца">
-          <input type="checkbox" id="vFollow" checked> следить за резом
-        </label>
-        <button id="vResetView" class="mini" title="Вернуть масштаб и вид (двойной щелчок по полю)">Сброс</button>
-      </div>
-      <div class="cvWrap" style="min-height:200px"><canvas id="cutCanvas"></canvas></div>
-      <div class="row">
-        <button id="simPlay" class="pri" style="width:46px;flex:0 0 46px" title="Пробел — пуск/пауза">▶</button>
-        <button id="simReset" class="gh" style="flex:0 0 auto" title="В начало">⟲</button>
-        <input type="range" id="cScrub" min="0" max="1000" value="0" step="1" style="flex:1 1 auto">
-        <select id="simSpeed" style="width:80px;flex:0 0 80px">
-          <option value="0.25">0.25×</option>
-          <option value="0.5">0.5×</option>
-          <option value="1" selected>1×</option>
-          <option value="2">2×</option>
-          <option value="5">5×</option>
-          <option value="10">10×</option>
-        </select>
-      </div>
-      <div class="row">
-        <span class="hint mono" id="cScrubLbl">0 % · 0.0 мм · 00:00</span>
-        <span class="grow1"></span>
-        <span class="badge" id="cBadgeLen">—</span>
-        <span class="badge" id="cBadgeTime">—</span>
-        <span class="badge" id="cBadgeSpan">—</span>
-      </div>
-      <label class="row" style="gap:6px;color:var(--dim);font-size:12px">
-        <input type="checkbox" id="cShowWire" checked> показывать проволоку на превью
-      </label>
-      <div class="hint" id="cSimSrc">—</div>
-      <div class="hint" id="vHint">Колесо мыши — зум · перетаскивание — сдвиг (в 3D — поворот, с Shift — сдвиг) ·
-        двойной щелчок — вернуть вид. В «Торцах 2D» каждая башня (левая и правая) увеличивается отдельно —
-        приближается только та, над которой стоит курсор. В <b>«Синхронизации»</b> оба торца наложены в одном
-        масштабе, между башнями видна проволока и пройденный путь — так читается, как идёт синхронный рез.
-        Сетка — 10 мм, размеры по краям — в миллиметрах.</div>
-    </div>
-
-    <div class="panel" style="width:380px">
-      <div class="hd">Управляющая программа <button id="cCopy" class="gh" style="margin-left:auto">Копировать</button></div>
-      <div class="row">
-        <button id="cGen" class="pri grow1">Сформировать УП</button>
-        <button id="cSaveTap">Скачать .tap</button>
-      </div>
-      <textarea id="cGcode" class="txt mono" spellcheck="false" placeholder="Нажми «Сформировать УП»"></textarea>
-      <div class="hint" id="cGcodeInfo">—</div>
+      <div class="hd">Оба торца в миллиметрах <span class="pill" id="dxfStat">—</span></div>
+      <div class="cvWrap" style="min-height:240px"><canvas id="dxfCanvas"></canvas></div>
+      <div class="hint" id="dxfInfo" style="font-size:11px;line-height:1.5">—</div>
+      <div class="hint" style="font-size:11px;line-height:1.45">Контуры наложены в натуральную величину: синяя линия —
+        левая башня (X,Y), оранжевая — правая (A,B); когда башни синхронны, они лежат друг на друге (пунктир сверху).
+        Сетка 10 мм, подписи по краям зелёные, линия y = 0 — хорда.</div>
     </div>
   </div>
 </section>
+
 <!-- ============================ СТАНОК ============================ -->
 <section class="tab" id="tab-machine">
   <div class="cols">
@@ -884,6 +874,25 @@ table.pts tr:hover td{background:#151d29}
         <b>одной строкой G-кода для обеих башен</b>: вход, рез и выход у левой и правой башни происходят
         одновременно, просто координаты разные. Всё это — один проход, один M3/M5.</p>
 
+        <h3 style="margin:14px 0 6px">3.2. Пенорезка DXF</h3>
+        <p>Отдельное окно для готовых контуров из SolidWorks и других CAD. Контур грузится
+        <b>на каждую башню своей кнопкой</b>: слева корневая нервюра (оси X, Y), справа концевая (оси A, B).
+        В базу профилей он <b>не попадает</b> — в списке «Профили» его нет, между запусками он живёт
+        отдельно. Кнопка «убрать» снимает контур, и башня снова режется профилем из базы, а размер реза
+        возвращается к тому, что стоял до загрузки.</p>
+        <p><b>Размер.</b> Файл из SolidWorks приходит в миллиметрах, и ширина контура в файле сразу
+        становится размером реза. Если файл не в миллиметрах или ширины в нём нет — размер вписывается
+        вручную в поле «размер контура, мм».</p>
+        <p><b>Синхронизация.</b> Галка «держать башни на одном контуре»: что загрузил в одну башню,
+        встаёт и в другую — рез идёт прямой призмой. Выключено — крыло с разными нервюрами, а кнопки
+        «левая → правая» / «правая → левая» переносят контур вручную.</p>
+        <p>Оба контура видно на холсте наложенными в натуральную величину: синяя линия — левая башня,
+        оранжевая — правая; совпали — правая ложится синим пунктиром ровно на левую. Сетка 10 мм,
+        подписи по краям зелёные, линия y = 0 — хорда.</p>
+        <p>Заготовка, сдвиги торцов, параметры реза, симуляция и УП живут в окне <b>«Пенорезка»</b>:
+        кнопка «К пенорезке — резать» переключает туда, и контур уже стоит своей башней.
+        Проект (`.json`) помнит и контуры DXF — они вернутся в это окно при открытии проекта.</p>
+
         <h3 style="margin:14px 0 6px">4. Симуляция</h3>
         <p>«Сформировать УП» не только создаёт файл, но и загружает его в симулятор: программа читает G-код обратно
         и двигает две башни ровно так, как это сделает станок. Инверсия осей и смещение нуля тоже учитываются —
@@ -893,6 +902,11 @@ table.pts tr:hover td{background:#151d29}
         Режим <b>Торцы 2D</b> — вид на каждую башню отдельно: <b>левая</b> (корневая нервюра)
         и <b>правая</b> (концевая), с текущими координатами в мм и сеткой 10 мм —
         размер на экране совпадает с настоящим (растяжения по Y нет).</p>
+        <p>Режим <b>Синхронизация</b> — вид со стороны проволоки, вдоль её оси. Когда обе башни идут
+        по одинаковым контурам, проволока в этом виде — точка: башни рисуются одним маркером
+        (синяя и оранжевая половина). Как только контуры расходятся — появляется линия проволоки
+        и видно, насколько одна башня отстала от другой. Зум колесом — вокруг курсора,
+        перетаскивание — сдвиг, у этого вида свой масштаб (подпись «синхр. ×…»).</p>
         <p><b>Приближение.</b> Колесо мыши приближает к курсору, и у каждой башни в «Торцах 2D»
         <b>свой масштаб</b>: крутишь колесо над левой — увеличивается только левая, правая остаётся как была.
         Пределы ×1…×40 в торцах и ×0.2…×14 в 3D. Рядом с кнопками <b>−</b> / <b>+</b> две подписи
@@ -5934,15 +5948,74 @@ function renderDxf() {
   if (inf) {
     inf.innerHTML = "<b>Синхронизация:</b> " + (same ? "контуры совпадают — обе нервюры одинаковые, рез идёт прямой призмой." : "контуры разные — рез идёт по двум разным нервюрам (крыло с переменным профилем).") + "<br><b>Режется</b> то, что показано в списке окна «Пенорезка»: если DXF не загружен, башня работает с профилем из базы.";
   }
+  renderDxfCanvas();
+}
+/* Оба контура в мм, наложенные друг на друга: так видно и совпадение башен,
+   и разницу в размере. Сетка — 10 мм, подписи зелёные 12 px (drawGrid). */
+function renderDxfCanvas() {
+  var cv = $("#dxfCanvas");
+  var r = setupCanvas(cv);
+  if (!r) return; // вкладка ещё не показана или холст не размерен
+  var ctx = r.ctx,
+    w = r.w,
+    h = r.h;
+  var cr = endChord("root", CFG.root.chord),
+    ct = endChord("tip", CFG.tip.chord);
+  var toMM = (key, ch) => {
+    var p = endProfile(key);
+    return p && p.pts && p.pts.length ? p.pts.map(q => [q[0] * ch, q[1] * ch]) : null;
+  };
+  var A = toMM("root", cr),
+    B = toMM("tip", ct);
+  var all = (A || []).concat(B || []);
+  if (all.length < 3) {
+    ctx.fillStyle = "#8b9bb4";
+    ctx.font = "13px Arial";
+    ctx.fillText("Нет контура", 16, 26);
+    return;
+  }
+  all.push([0, 0]);
+  var map = makeMap(all, w, h, 34);
+  drawGrid(ctx, map, w, h, 1); // сетка в миллиметрах: клетка 10 мм
+  ctx.strokeStyle = "#3a4a63";
+  ctx.lineWidth = 1; // хорда y = 0 — до самой длинной нервюры
+  ctx.beginPath();
+  ctx.moveTo(map.X(0), map.Y(0));
+  ctx.lineTo(map.X(Math.max(cr, ct)), map.Y(0));
+  ctx.stroke();
+  var same = dxfSameProfile();
+  if (A) drawContour(ctx, map, A, {
+    color: "#4ea1ff",
+    lw: 2
+  });
+  if (B) {
+    ctx.save();
+    if (same) ctx.setLineDash([7, 5]); // совпали — пунктир лежит ровно на синей линии
+    drawContour(ctx, map, B, {
+      color: same ? "#4ea1ff" : "#ffb347",
+      lw: 2
+    });
+    ctx.restore();
+  }
+  var rp = endProfile("root"),
+    tp = endProfile("tip");
+  ctx.font = "12px Arial";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  ctx.fillStyle = "#4ea1ff";
+  ctx.fillText("левая (X,Y) — " + (rp ? rp.name : "—"), 8, 6);
+  ctx.fillStyle = same ? "#4ea1ff" : "#ffb347";
+  ctx.fillText("правая (A,B) — " + (tp ? tp.name : "—"), 8, 22);
+  ctx.textBaseline = "alphabetic";
 }
 /* ================= вкладки ================= */
 function switchTab(name) {
   $$("#tabs button").forEach(b => b.classList.toggle("act", b.dataset.tab === name));
   $$("section.tab").forEach(s => s.classList.toggle("act", s.id === "tab-" + name));
   layoutAllCols(); // размеры панелей новой вкладки — до отрисовки холстов
-  // Симуляция и настройки реза живут в «Пенорезке DXF»: считаем и рисуем сразу,
-  // синхронно — холст должен быть готов без ожидания кадра (иначе остаётся 300×150)
-  if (name === "cut" || name === "cutdxf") {
+  // Считаем и рисуем сразу, синхронно — холст должен быть готов без ожидания кадра
+  // (иначе остаётся 300×150: в фоновой вкладке requestAnimationFrame не приходит)
+  if (name === "cut") {
     refreshCut(false);
     renderCut();
     renderSparPreview();
@@ -5956,7 +6029,7 @@ function switchTab(name) {
     if (name === "editor") {
       renderEditor();
     }
-    if (name === "cut" || name === "cutdxf") {
+    if (name === "cut") {
       renderCut();
     } // повторно: кадр подтвердил размеры
     if (name === "cutdxf") renderDxf();
@@ -8200,7 +8273,6 @@ function init() {
       renderSparPreview();
     }
     if (t.id === "tab-cutdxf") {
-      renderCut();
       renderDxf();
     }
   });
