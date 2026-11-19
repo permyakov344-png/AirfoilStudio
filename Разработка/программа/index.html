@@ -852,10 +852,14 @@ table.pts tr:hover td{background:#151d29}
         <p><b>Размер.</b> Файл из SolidWorks приходит в миллиметрах, и ширина контура в файле сразу
         становится размером реза. Если файл не в миллиметрах или ширины в нём нет — размер вписывается
         вручную в поле «размер контура, мм».</p>
-        <p><b>Какой контур берётся.</b> Внешний обвод детали. Файл из CAD можно не подчищать:
-        обвод часто порезан на много линий, полилиний и дуг, и программа собирает их в один контур,
-        а из замкнутых обводов берёт самый большой по площади. Внутренние отверстия, рамки, штампы
-        и узкие прорези от обвода к отверстию в рез не попадают.</p>
+        <p><b>Какой контур берётся.</b> Деталь целиком — внешний обвод <b>вместе с отверстиями
+        и прорезями</b>. Файл из CAD можно не подчищать: обвод часто порезан на много линий,
+        полилиний и дуг, и программа собирает их в одну цепочку, а если отверстие соединено
+        с обводом прорезью, то обвод → прорезь → отверстие → обратно идёт одним маршрутом.
+        Внутренние рамки и штампы, не связанные с деталью, в рез не попадают.</p>
+        <p><b>Вход в контур.</b> Обе башни встают на середину плоского торца детали (там, где
+        контур выходит на <b>x = 1</b>) и входят в рез <b>по прямой</b>, горизонтально со своего торца.
+        Перешейки не срезаются, контур замыкается последним шагом в ту же точку.</p>
         <p><b>Синхронизация.</b> Галка «держать башни на одном контуре»: что загрузил в одну башню,
         встаёт и в другую — рез идёт прямой призмой. Выключено — крыло с разными нервюрами, а кнопки
         «левая → правая» / «правая → левая» переносят контур вручную.</p>
@@ -2977,6 +2981,79 @@ function buildEnd(cfg, prof, N){
   return { pts:c };
 }
 
+/* Длина замкнутого контура (доли хорды) — по ней считаем число точек реза. */
+function polyLength(pts){
+  let s = 0;
+  for(let i = 0; i < pts.length; i++){
+    const a = pts[i], b = pts[(i+1) % pts.length];
+    s += Math.hypot(b[0]-a[0], b[1]-a[1]);
+  }
+  return s;
+}
+
+/* То же, что buildEnd, но контур берётся из CAD целиком: замкнутый обвод со всеми
+   внутренними контурами и прорезями к ним. Точки ставятся равномерно по длине
+   контура, а старт — середина плоского торца при x=1: там обе башни стоят на одном
+   Y, поэтому вход в рез по прямой с любой из башен (и с левой, и с правой). */
+function buildEndCad(cfg, prof, N){
+  let p0 = ((prof && prof.pts) || []).filter(q => Array.isArray(q) && isFinite(q[0]) && isFinite(q[1]));
+  if(p0.length > 3 && Math.hypot(p0[0][0]-p0[p0.length-1][0], p0[0][1]-p0[p0.length-1][1]) < 1e-9) p0.pop();
+  const n = p0.length;
+  if(n < 3) return null;
+  const seg = [];
+  let per = 0;
+  for(let i = 0; i < n; i++){
+    const a = p0[i], b = p0[(i+1) % n];
+    const l = Math.hypot(b[0]-a[0], b[1]-a[1]);
+    seg.push(l); per += l;
+  }
+  if(!(per > 1e-9)) return null;
+
+  // старт — середина самого длинного участка на торце x=1: там плоская кромка,
+  // значит вход и выход лягут на неё, без диагонали через торец
+  const arc = [0];
+  for(let i = 0; i < n; i++) arc.push(arc[i] + seg[i]);
+  const isFace = i => Math.abs(p0[((i % n) + n) % n][0] - 1) <= 1e-6;
+  let start = -1, bestRun = -1;
+  for(let i = 0; i < n; i++){
+    if(!isFace(i) || isFace(i - 1)) continue;      // только начало участка
+    let guard = 0;
+    while(guard < n && isFace(i + guard)) guard++;
+    if(!guard) continue;
+    // длина участка по дуге: от первой точки торца до последней, дальше уже обвод
+    const run = arc[i + guard - 1] - arc[i];
+    if(run > bestRun){ bestRun = run; start = arc[i] + run / 2; }
+  }
+  if(start < 0){                                    // торца x=1 нет — с самой правой точки
+    let mi = 0;
+    for(let i = 1; i < n; i++) if(p0[i][0] > p0[mi][0]) mi = i;
+    start = arc[mi];
+  }
+
+  // равномерная развёртка по длине: N точек на весь периметр, замыкание —
+  // короткий отрезок от последней точки к старту (он же и вход/выход проволоки)
+  const out = [];
+  const stepLen = per / Math.max(1, N);
+  const seek = t => {
+    let k = 0, a = 0;
+    while(k < n - 1 && a + seg[k] < t){ a += seg[k]; k++; }
+    return [k, t - a];
+  };
+  for(let q = 0; q < N; q++){
+    let t = start + q * stepLen;
+    while(t >= per) t -= per;
+    const [k, u] = seek(t);
+    const a = p0[k], b = p0[(k+1) % n];
+    const f = clamp(u / (seg[k] || 1), 0, 1);
+    out.push([a[0] + (b[0]-a[0])*f, a[1] + (b[1]-a[1])*f]);
+  }
+
+  let c = out.map(([x,y]) => mapPt(cfg, x, y));
+  const kf = cutKerf();
+  if(kf > 0) c = offsetPoly(c, kf/2);
+  return { pts:c };
+}
+
 /* Полость лонжерона на торце: замкнутый контур + точка захода (сверху/снизу).
    Контур уже с учётом ширины реза: для отверстия проволока идёт внутри на kerf/2. */
 /* Список полостей лонжерона: одна (труба / прямоугольник) или две (2 прямоугольника — сверху и снизу). */
@@ -3143,11 +3220,22 @@ function computeCut(){
   const tp = endProfile("tip");
   if(!rp || !tp) return null;
   const maxCh = Math.max(+CFG.root.chord || 1, +CFG.tip.chord || 1);
-  const N = clamp(Math.ceil(maxCh / Math.max(0.2, +CFG.step || 2)) + 1, 25, 900);
+  let N = clamp(Math.ceil(maxCh / Math.max(0.2, +CFG.step || 2)) + 1, 25, 900);
+  const dxfMode = (CUT_SRC === "dxf");
+  if(dxfMode){
+    // контур из CAD идёт целиком (с отверстиями): точек нужно по длине обвода
+    // и не меньше, чем вершин в файле, иначе углы отверстий и прорезей срежутся
+    const per = Math.max(polyLength(rp.pts) * (+CFG.root.chord || 1),
+                         polyLength(tp.pts) * (+CFG.tip.chord || 1));
+    const nv = Math.max((rp.pts || []).length, (tp.pts || []).length);
+    N = clamp(Math.max(Math.ceil(per / Math.max(0.2, +CFG.step || 2)) + 1,
+                       Math.ceil(nv * 1.5)), 60, 900);
+  }
   const M = towerMap();                 // башни (концы проволоки) могут стоять шире заготовки
 
-  const R = buildEnd(CFG.root, rp, N);
-  const T = buildEnd(CFG.tip, tp, N);
+  const R = dxfMode ? buildEndCad(CFG.root, rp, N) : buildEnd(CFG.root, rp, N);
+  const T = dxfMode ? buildEndCad(CFG.tip,  tp, N) : buildEnd(CFG.tip,  tp, N);
+  if(!R || !T) return null;
 
   // габариты обоих торцов — чтобы поставить заготовку
   let xmin = Infinity, xmax = -Infinity, ymin = Infinity, ymax = -Infinity;
@@ -3168,7 +3256,10 @@ function computeCut(){
 
   const teY = pts => (pts[0][1] + pts[pts.length-1][1]) / 2;
   const back = Math.max(0, +CFG.lead || 0);
-  const entryR = [0, teY(R.pts)], entryT = [0, teY(T.pts)];
+  // В «Пенорезке DXF» вход — строго по прямой: первая точка реза стоит на середине
+  // плоского торца x=1, поэтому холодная подводка идёт горизонтально с обеих башен.
+  const entryR = [0, dxfMode ? R.pts[0][1] : teY(R.pts)];
+  const entryT = [0, dxfMode ? T.pts[0][1] : teY(T.pts)];
   const parkR = [-back, entryR[1]], parkT = [-back, entryT[1]];
 
   // Полости лонжерона (одна или две на торце): контур размечен косинусно, индекс
@@ -3183,7 +3274,7 @@ function computeCut(){
   const idxBot = fx => n1 + Math.round(n1 / Math.PI * Math.acos(clamp(1 - 2*fx, -1, 1)));
   const kk = Math.max(0, cutKerf()) / 2;
   const cav = [];
-  for(const def of sparDefsResolved()){
+  for(const def of (dxfMode ? [] : sparDefsResolved())){
     const cR = buildCavity(CFG.root, def, "root");
     const cT = buildCavity(CFG.tip, def, "tip");
     if(!cR || !cT) continue;
@@ -3303,10 +3394,17 @@ function computeCut(){
     const p = doSpar(sp[si]);
     curR = p[0]; curT = p[1];
   }
+  // Контур из CAD (полигон целиком): идём по точкам парами, ничего не досчитывая.
+  // Внутренние контуры и прорези к ним уже лежат в этих же точках, поэтому рез
+  // идёт по ним так же, как по обводу.
+  if(dxfMode){
+    for(let i = 1; i < R.pts.length; i++) push(false, R.pts[i], T.pts[i]);
+    push(false, R.pts[0], T.pts[0]);      // замкнули контур: последний шаг до старта
+  }
   // Торец задней кромки: при ненулевой толщине ЗК контур не замкнут —
   // от нижней точки ЗК к верхней, иначе там остаётся непрорезанная перемычка.
   const teGap = (pts) => hypot(pts[0], pts[pts.length-1]);
-  if(teGap(R.pts) > 0.02 || teGap(T.pts) > 0.02){
+  if(!dxfMode && (teGap(R.pts) > 0.02 || teGap(T.pts) > 0.02)){
     const j = push(false, R.pts[0], T.pts[0]);
     ops[j].note = "(trailing edge face)";
   }
@@ -3565,7 +3663,7 @@ function renderCut(){
   for(const [side, pts, col] of [[0, C.T.pts, "#4ea1ff"], [1, C.R.pts, "#38d39f"]]){
     const xSide = side ? x1 : x0;
     ctx.strokeStyle = col; ctx.lineWidth = 1.1; ctx.globalAlpha = .3;
-    const sm = smoothOutline(pts);
+    const sm = cutOutline(pts);
     ctx.beginPath();
     for(let i=0;i<sm.length;i++){
       const q = v(xSide, sm[i][1], sm[i][0]);
@@ -3803,6 +3901,12 @@ function renderCutSync(ctx, w, h){
   ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
 }
 
+/* Контур торца для рисования: профиль из базы сглаживаем, контур из CAD рисуем
+   как есть — в нём есть отверстия и прорези, сглаживание их испортит. */
+function cutOutline(pts){
+  return (CUT_SRC === "dxf") ? (pts || []).map(p => p.slice()) : smoothOutline(pts);
+}
+
 function renderCut2D(ctx, w, h){
   const C = LAST;
   ctx.font = "12px Segoe UI";
@@ -3888,7 +3992,7 @@ function renderCut2D(ctx, w, h){
     ctx.fillText("торец X0", X(B.x0)+5, Y(B.y1)+14);
 
     // контур (сплайн)
-    const sm = smoothOutline(pn.pts);
+    const sm = cutOutline(pn.pts);
     ctx.beginPath();
     for(let i=0;i<sm.length;i++){
       const q = sm[i];
@@ -4432,7 +4536,7 @@ function renderSparPreview(){
     ctx.setLineDash([]);
 
     // контур нервюры — сплайном
-    const sm = smoothOutline(prof.pts);
+    const sm = cutOutline(prof.pts);
     ctx.beginPath();
     for(let i=0;i<sm.length;i++){
       const q = sm[i];
@@ -4936,7 +5040,7 @@ async function dxfLoadTo(key){
   try{
     const txt = await f.text();          // переменная обязана называться f: сборка XP подменяет это чтение
     raw = parseDxf(txt);
-    pts = normalizeImported(raw);
+    pts = profilePoly(raw);
   }catch(e){ pts = null; }
   inp.value = "";
   if(!pts)
@@ -5676,7 +5780,10 @@ function dxfOutline(paths){
   const diag = Math.hypot(xmax - xmin, ymax - ymin) || 1;
   let best = null;
   for(const ch of dxfJoin(clean, diag * 0.0015)){
-    const loop = dxfTrimNeck(ch, diag);
+    // Перешеек не срезаем: если отверстие соединено с обводом прорезью, это и есть
+    // готовый маршрут реза (обвод → прорезь → отверстие → обратно). Отдельные
+    // замкнутые контуры остаются отдельными цепочками, их отсеивает площадь.
+    const loop = ch;
     if(loop.length < 3) continue;
     const a = dxfArea(loop);
     if(!best || a > best.a) best = { a, pts: loop };
@@ -5798,7 +5905,27 @@ function profileFromCad(raw){
   return out;
 }
 
-/* Профиль из CAD: станции по X, верх и низ — как их видит станок. */
+/* Контур из CAD как есть: замкнутый обвод целиком, без «верх/низ по станциям».
+   Так до реза доходят и внутренние контуры, и прорезь к ним — ничего не теряется. */
+function profilePoly(raw){
+  let pts = (raw || []).filter(p => Array.isArray(p) && isFinite(p[0]) && isFinite(p[1]));
+  const cl = [];
+  for(const q of pts)
+    if(!cl.length || Math.hypot(q[0]-cl[cl.length-1][0], q[1]-cl[cl.length-1][1]) > 1e-9) cl.push(q);
+  if(cl.length > 3 && Math.hypot(cl[0][0]-cl[cl.length-1][0], cl[0][1]-cl[cl.length-1][1]) <= 1e-9) cl.pop();
+  pts = cl;
+  if(pts.length < 3) return null;
+  let xmin = Infinity, xmax = -Infinity;
+  for(const q of pts){ if(q[0] < xmin) xmin = q[0]; if(q[0] > xmax) xmax = q[0]; }
+  const chord = xmax - xmin;
+  if(!(chord > 1e-9)) return null;
+  const eps = chord * 1e-6;
+  // начало координат по Y — середина передней кромки (там, где x = xmin)
+  let sy = 0, sn = 0;
+  for(const q of pts) if(Math.abs(q[0] - xmin) <= eps){ sy += q[1]; sn++; }
+  const y0 = sn ? sy / sn : pts[0][1];
+  return pts.map(q => [(q[0]-xmin)/chord, (q[1]-y0)/chord]);
+}
 
 function normalizeImported(raw){
   const pts = profileFromCad(raw);
@@ -5842,7 +5969,7 @@ const PDF_JOINT = 8;              // нахлёст листов при разб
 
 /* контур нервюры в мм: x — от передней кромки, y — от хорды */
 function ribContourMM(prof, chord){
-  const pts = smoothOutline(prof && prof.pts).map(([x,y]) => [x*chord, y*chord]);
+  const pts = cutOutline(prof && prof.pts).map(([x,y]) => [x*chord, y*chord]);
   let ymin = Infinity, ymax = -Infinity;
   for(const p of pts){ if(p[1] < ymin) ymin = p[1]; if(p[1] > ymax) ymax = p[1]; }
   return { pts, ymin, ymax };

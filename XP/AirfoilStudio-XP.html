@@ -877,10 +877,14 @@ table.pts tr:hover td{background:#151d29}
         <p><b>Размер.</b> Файл из SolidWorks приходит в миллиметрах, и ширина контура в файле сразу
         становится размером реза. Если файл не в миллиметрах или ширины в нём нет — размер вписывается
         вручную в поле «размер контура, мм».</p>
-        <p><b>Какой контур берётся.</b> Внешний обвод детали. Файл из CAD можно не подчищать:
-        обвод часто порезан на много линий, полилиний и дуг, и программа собирает их в один контур,
-        а из замкнутых обводов берёт самый большой по площади. Внутренние отверстия, рамки, штампы
-        и узкие прорези от обвода к отверстию в рез не попадают.</p>
+        <p><b>Какой контур берётся.</b> Деталь целиком — внешний обвод <b>вместе с отверстиями
+        и прорезями</b>. Файл из CAD можно не подчищать: обвод часто порезан на много линий,
+        полилиний и дуг, и программа собирает их в одну цепочку, а если отверстие соединено
+        с обводом прорезью, то обвод → прорезь → отверстие → обратно идёт одним маршрутом.
+        Внутренние рамки и штампы, не связанные с деталью, в рез не попадают.</p>
+        <p><b>Вход в контур.</b> Обе башни встают на середину плоского торца детали (там, где
+        контур выходит на <b>x = 1</b>) и входят в рез <b>по прямой</b>, горизонтально со своего торца.
+        Перешейки не срезаются, контур замыкается последним шагом в ту же точку.</p>
         <p><b>Синхронизация.</b> Галка «держать башни на одном контуре»: что загрузил в одну башню,
         встаёт и в другую — рез идёт прямой призмой. Выключено — крыло с разными нервюрами, а кнопки
         «левая → правая» / «правая → левая» переносят контур вручную.</p>
@@ -3230,6 +3234,96 @@ function buildEnd(cfg, prof, N) {
   };
 }
 
+/* Длина замкнутого контура (доли хорды) — по ней считаем число точек реза. */
+function polyLength(pts) {
+  var s = 0;
+  for (var i = 0; i < pts.length; i++) {
+    var a = pts[i],
+      b = pts[(i + 1) % pts.length];
+    s += Math.hypot(b[0] - a[0], b[1] - a[1]);
+  }
+  return s;
+}
+
+/* То же, что buildEnd, но контур берётся из CAD целиком: замкнутый обвод со всеми
+   внутренними контурами и прорезями к ним. Точки ставятся равномерно по длине
+   контура, а старт — середина плоского торца при x=1: там обе башни стоят на одном
+   Y, поэтому вход в рез по прямой с любой из башен (и с левой, и с правой). */
+function buildEndCad(cfg, prof, N) {
+  var p0 = (prof && prof.pts || []).filter(q => Array.isArray(q) && isFinite(q[0]) && isFinite(q[1]));
+  if (p0.length > 3 && Math.hypot(p0[0][0] - p0[p0.length - 1][0], p0[0][1] - p0[p0.length - 1][1]) < 1e-9) p0.pop();
+  var n = p0.length;
+  if (n < 3) return null;
+  var seg = [];
+  var per = 0;
+  for (var i = 0; i < n; i++) {
+    var a = p0[i],
+      b = p0[(i + 1) % n];
+    var l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    seg.push(l);
+    per += l;
+  }
+  if (!(per > 1e-9)) return null;
+
+  // старт — середина самого длинного участка на торце x=1: там плоская кромка,
+  // значит вход и выход лягут на неё, без диагонали через торец
+  var arc = [0];
+  for (var _i9 = 0; _i9 < n; _i9++) arc.push(arc[_i9] + seg[_i9]);
+  var isFace = i => Math.abs(p0[(i % n + n) % n][0] - 1) <= 1e-6;
+  var start = -1,
+    bestRun = -1;
+  for (var _i0 = 0; _i0 < n; _i0++) {
+    if (!isFace(_i0) || isFace(_i0 - 1)) continue; // только начало участка
+    var guard = 0;
+    while (guard < n && isFace(_i0 + guard)) guard++;
+    if (!guard) continue;
+    // длина участка по дуге: от первой точки торца до последней, дальше уже обвод
+    var run = arc[_i0 + guard - 1] - arc[_i0];
+    if (run > bestRun) {
+      bestRun = run;
+      start = arc[_i0] + run / 2;
+    }
+  }
+  if (start < 0) {
+    // торца x=1 нет — с самой правой точки
+    var mi = 0;
+    for (var _i1 = 1; _i1 < n; _i1++) if (p0[_i1][0] > p0[mi][0]) mi = _i1;
+    start = arc[mi];
+  }
+
+  // равномерная развёртка по длине: N точек на весь периметр, замыкание —
+  // короткий отрезок от последней точки к старту (он же и вход/выход проволоки)
+  var out = [];
+  var stepLen = per / Math.max(1, N);
+  var seek = t => {
+    var k = 0,
+      a = 0;
+    while (k < n - 1 && a + seg[k] < t) {
+      a += seg[k];
+      k++;
+    }
+    return [k, t - a];
+  };
+  for (var q = 0; q < N; q++) {
+    var t = start + q * stepLen;
+    while (t >= per) t -= per;
+    var _seek = seek(t),
+      _seek2 = _slicedToArray(_seek, 2),
+      k = _seek2[0],
+      u = _seek2[1];
+    var _a = p0[k],
+      _b = p0[(k + 1) % n];
+    var f = clamp(u / (seg[k] || 1), 0, 1);
+    out.push([_a[0] + (_b[0] - _a[0]) * f, _a[1] + (_b[1] - _a[1]) * f]);
+  }
+  var c = out.map(([x, y]) => mapPt(cfg, x, y));
+  var kf = cutKerf();
+  if (kf > 0) c = offsetPoly(c, kf / 2);
+  return {
+    pts: c
+  };
+}
+
 /* Полость лонжерона на торце: замкнутый контур + точка захода (сверху/снизу).
    Контур уже с учётом ширины реза: для отверстия проволока идёт внутри на kerf/2. */
 /* Список полостей лонжерона: одна (труба / прямоугольник) или две (2 прямоугольника — сверху и снизу). */
@@ -3469,10 +3563,19 @@ function computeCut() {
   if (!rp || !tp) return null;
   var maxCh = Math.max(+CFG.root.chord || 1, +CFG.tip.chord || 1);
   var N = clamp(Math.ceil(maxCh / Math.max(0.2, +CFG.step || 2)) + 1, 25, 900);
+  var dxfMode = CUT_SRC === "dxf";
+  if (dxfMode) {
+    // контур из CAD идёт целиком (с отверстиями): точек нужно по длине обвода
+    // и не меньше, чем вершин в файле, иначе углы отверстий и прорезей срежутся
+    var per = Math.max(polyLength(rp.pts) * (+CFG.root.chord || 1), polyLength(tp.pts) * (+CFG.tip.chord || 1));
+    var nv = Math.max((rp.pts || []).length, (tp.pts || []).length);
+    N = clamp(Math.max(Math.ceil(per / Math.max(0.2, +CFG.step || 2)) + 1, Math.ceil(nv * 1.5)), 60, 900);
+  }
   var M = towerMap(); // башни (концы проволоки) могут стоять шире заготовки
 
-  var R = buildEnd(CFG.root, rp, N);
-  var T = buildEnd(CFG.tip, tp, N);
+  var R = dxfMode ? buildEndCad(CFG.root, rp, N) : buildEnd(CFG.root, rp, N);
+  var T = dxfMode ? buildEndCad(CFG.tip, tp, N) : buildEnd(CFG.tip, tp, N);
+  if (!R || !T) return null;
 
   // габариты обоих торцов — чтобы поставить заготовку
   var xmin = Infinity,
@@ -3511,8 +3614,10 @@ function computeCut() {
   };
   var teY = pts => (pts[0][1] + pts[pts.length - 1][1]) / 2;
   var back = Math.max(0, +CFG.lead || 0);
-  var entryR = [0, teY(R.pts)],
-    entryT = [0, teY(T.pts)];
+  // В «Пенорезке DXF» вход — строго по прямой: первая точка реза стоит на середине
+  // плоского торца x=1, поэтому холодная подводка идёт горизонтально с обеих башен.
+  var entryR = [0, dxfMode ? R.pts[0][1] : teY(R.pts)];
+  var entryT = [0, dxfMode ? T.pts[0][1] : teY(T.pts)];
   var parkR = [-back, entryR[1]],
     parkT = [-back, entryT[1]];
 
@@ -3528,7 +3633,7 @@ function computeCut() {
   var idxBot = fx => n1 + Math.round(n1 / Math.PI * Math.acos(clamp(1 - 2 * fx, -1, 1)));
   var kk = Math.max(0, cutKerf()) / 2;
   var cav = [];
-  var _iterator10 = _createForOfIteratorHelper(sparDefsResolved()),
+  var _iterator10 = _createForOfIteratorHelper(dxfMode ? [] : sparDefsResolved()),
     _step10;
   try {
     var _loop4 = function _loop4() {
@@ -3696,10 +3801,17 @@ function computeCut() {
     curR = p[0];
     curT = p[1];
   }
+  // Контур из CAD (полигон целиком): идём по точкам парами, ничего не досчитывая.
+  // Внутренние контуры и прорези к ним уже лежат в этих же точках, поэтому рез
+  // идёт по ним так же, как по обводу.
+  if (dxfMode) {
+    for (var i = 1; i < R.pts.length; i++) push(false, R.pts[i], T.pts[i]);
+    push(false, R.pts[0], T.pts[0]); // замкнули контур: последний шаг до старта
+  }
   // Торец задней кромки: при ненулевой толщине ЗК контур не замкнут —
   // от нижней точки ЗК к верхней, иначе там остаётся непрорезанная перемычка.
   var teGap = pts => hypot(pts[0], pts[pts.length - 1]);
-  if (teGap(R.pts) > 0.02 || teGap(T.pts) > 0.02) {
+  if (!dxfMode && (teGap(R.pts) > 0.02 || teGap(T.pts) > 0.02)) {
     var j = push(false, R.pts[0], T.pts[0]);
     ops[j].note = "(trailing edge face)";
   }
@@ -3721,8 +3833,8 @@ function computeCut() {
     b0: Infinity,
     b1: -Infinity
   };
-  for (var i = 0; i < ops.length; i++) {
-    var P = toTowers(ops[i].L, ops[i].R, M);
+  for (var _i10 = 0; _i10 < ops.length; _i10++) {
+    var P = toTowers(ops[_i10].L, ops[_i10].R, M);
     if (P[0][0] < tw.x0) tw.x0 = P[0][0];
     if (P[0][0] > tw.x1) tw.x1 = P[0][0];
     if (P[0][1] < tw.y0) tw.y0 = P[0][1];
@@ -3997,8 +4109,8 @@ function renderCut() {
   var box = [[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1], [x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1]].map(q => v(q[0], q[1], q[2]));
   var edges = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]];
   ctx.beginPath();
-  for (var _i9 = 0, _edges = edges; _i9 < _edges.length; _i9++) {
-    var _edges$_i = _slicedToArray(_edges[_i9], 2),
+  for (var _i11 = 0, _edges = edges; _i11 < _edges.length; _i11++) {
+    var _edges$_i = _slicedToArray(_edges[_i11], 2),
       i = _edges$_i[0],
       j = _edges$_i[1];
     ctx.moveTo(box[i][0], box[i][1]);
@@ -4010,8 +4122,8 @@ function renderCut() {
   ctx.strokeStyle = "rgba(130,160,200,.35)";
   ctx.lineWidth = 2;
   ctx.beginPath();
-  for (var _i0 = 0, _arr = [0, span]; _i0 < _arr.length; _i0++) {
-    var x = _arr[_i0];
+  for (var _i12 = 0, _arr = [0, span]; _i12 < _arr.length; _i12++) {
+    var x = _arr[_i12];
     var a = v(x, yBase, zLo),
       b = v(x, yBase, zHi);
     ctx.moveTo(a[0], a[1]);
@@ -4026,17 +4138,17 @@ function renderCut() {
   ctx.strokeStyle = "rgba(78,161,255,.22)";
   ctx.lineWidth = 1;
   ctx.beginPath();
-  for (var _i1 = 0; _i1 < C.R.pts.length; _i1 += stepI) {
-    var _a = v(x0, C.T.pts[_i1][1], C.T.pts[_i1][0]);
-    var _b = v(x1, C.R.pts[_i1][1], C.R.pts[_i1][0]);
-    ctx.moveTo(_a[0], _a[1]);
-    ctx.lineTo(_b[0], _b[1]);
+  for (var _i13 = 0; _i13 < C.R.pts.length; _i13 += stepI) {
+    var _a2 = v(x0, C.T.pts[_i13][1], C.T.pts[_i13][0]);
+    var _b2 = v(x1, C.R.pts[_i13][1], C.R.pts[_i13][0]);
+    ctx.moveTo(_a2[0], _a2[1]);
+    ctx.lineTo(_b2[0], _b2[1]);
   }
   ctx.stroke();
 
   // торцы заготовки: контур и пройденная часть (нервюры живут на блоке, не на башнях)
   var _loop5 = function _loop5() {
-    var _arr2$_i = _slicedToArray(_arr2[_i10], 3),
+    var _arr2$_i = _slicedToArray(_arr2[_i14], 3),
       side = _arr2$_i[0],
       pts = _arr2$_i[1],
       col = _arr2$_i[2];
@@ -4044,11 +4156,11 @@ function renderCut() {
     ctx.strokeStyle = col;
     ctx.lineWidth = 1.1;
     ctx.globalAlpha = .3;
-    var sm = smoothOutline(pts);
+    var sm = cutOutline(pts);
     ctx.beginPath();
-    for (var _i11 = 0; _i11 < sm.length; _i11++) {
-      var q = v(xSide, sm[_i11][1], sm[_i11][0]);
-      if (_i11 === 0) ctx.moveTo(q[0], q[1]);else ctx.lineTo(q[0], q[1]);
+    for (var _i15 = 0; _i15 < sm.length; _i15++) {
+      var q = v(xSide, sm[_i15][1], sm[_i15][0]);
+      if (_i15 === 0) ctx.moveTo(q[0], q[1]);else ctx.lineTo(q[0], q[1]);
     }
     ctx.closePath();
     ctx.stroke();
@@ -4067,8 +4179,8 @@ function renderCut() {
         ctx.stroke();
       };
       ctx.lineWidth = 2.2;
-      for (var _i12 = 1; _i12 <= st.i && _i12 < SIM.pts.length; _i12++) {
-        drawSeg(side ? SIM.pts[_i12 - 1].L : SIM.pts[_i12 - 1].R, side ? SIM.pts[_i12].L : SIM.pts[_i12].R, SIM.pts[_i12].rapid);
+      for (var _i16 = 1; _i16 <= st.i && _i16 < SIM.pts.length; _i16++) {
+        drawSeg(side ? SIM.pts[_i16 - 1].L : SIM.pts[_i16 - 1].R, side ? SIM.pts[_i16].L : SIM.pts[_i16].R, SIM.pts[_i16].rapid);
       }
       if (st.f > 1e-6 && SIM.pts[st.i]) {
         drawSeg(side ? SIM.pts[st.i].L : SIM.pts[st.i].R, side ? st.L : st.R, st.rapid);
@@ -4076,7 +4188,7 @@ function renderCut() {
       ctx.setLineDash([]);
     }
   };
-  for (var _i10 = 0, _arr2 = [[0, C.T.pts, "#4ea1ff"], [1, C.R.pts, "#38d39f"]]; _i10 < _arr2.length; _i10++) {
+  for (var _i14 = 0, _arr2 = [[0, C.T.pts, "#4ea1ff"], [1, C.R.pts, "#38d39f"]]; _i14 < _arr2.length; _i14++) {
     _loop5();
   }
 
@@ -4087,8 +4199,8 @@ function renderCut() {
     try {
       for (_iterator11.s(); !(_step11 = _iterator11.n()).done;) {
         var cv = _step11.value;
-        for (var _i13 = 0, _arr3 = [[0, cv.sT.pts], [1, cv.sR.pts]]; _i13 < _arr3.length; _i13++) {
-          var _arr3$_i = _slicedToArray(_arr3[_i13], 2),
+        for (var _i17 = 0, _arr3 = [[0, cv.sT.pts], [1, cv.sR.pts]]; _i17 < _arr3.length; _i17++) {
+          var _arr3$_i = _slicedToArray(_arr3[_i17], 2),
             side = _arr3$_i[0],
             pts = _arr3$_i[1];
           var xSide = side ? x1 : x0;
@@ -4096,9 +4208,9 @@ function renderCut() {
           ctx.lineWidth = 1.6;
           ctx.setLineDash([5, 4]);
           ctx.beginPath();
-          for (var _i14 = 0; _i14 < pts.length; _i14++) {
-            var q = v(xSide, pts[_i14][1], pts[_i14][0]);
-            if (_i14) ctx.lineTo(q[0], q[1]);else ctx.moveTo(q[0], q[1]);
+          for (var _i18 = 0; _i18 < pts.length; _i18++) {
+            var q = v(xSide, pts[_i18][1], pts[_i18][0]);
+            if (_i18) ctx.lineTo(q[0], q[1]);else ctx.moveTo(q[0], q[1]);
           }
           if (!cv.open) ctx.closePath(); // у открытого паза грань на обводе не замыкаем
           ctx.stroke();
@@ -4110,9 +4222,9 @@ function renderCut() {
         var pa = cv.sT.pts,
           pb = cv.sR.pts; // слева корневая (x1), справа концевая (x0)
         var stp = Math.max(1, Math.floor(pa.length / 12));
-        for (var _i15 = 0; _i15 < pa.length; _i15 += stp) {
-          var p1 = v(x0, pa[_i15][1], pa[_i15][0]),
-            p2 = v(x1, pb[_i15][1], pb[_i15][0]);
+        for (var _i19 = 0; _i19 < pa.length; _i19 += stp) {
+          var p1 = v(x0, pa[_i19][1], pa[_i19][0]),
+            p2 = v(x1, pb[_i19][1], pb[_i19][0]);
           ctx.moveTo(p1[0], p1[1]);
           ctx.lineTo(p2[0], p2[1]);
         }
@@ -4130,21 +4242,21 @@ function renderCut() {
   // линии «корень → конец» за торцы заготовки (экстраполяция), а не сам профиль
   if (st) {
     var _P = toTowers(st.L, st.R);
-    for (var _i16 = 0, _arr4 = [[0, _P[0], "#8ec6ff"], [1, _P[1], "#7ee0b6"]]; _i16 < _arr4.length; _i16++) {
-      var _arr4$_i = _slicedToArray(_arr4[_i16], 3),
+    for (var _i20 = 0, _arr4 = [[0, _P[0], "#8ec6ff"], [1, _P[1], "#7ee0b6"]]; _i20 < _arr4.length; _i20++) {
+      var _arr4$_i = _slicedToArray(_arr4[_i20], 3),
         _side = _arr4$_i[0],
         cur = _arr4$_i[1],
         col = _arr4$_i[2];
       var _xSide = _side ? span : 0;
       var yTop = Math.max(cur[1], yBase + 4);
-      var _a2 = v(_xSide, yBase, cur[0]);
-      var _b2 = v(_xSide, yTop, cur[0]);
+      var _a3 = v(_xSide, yBase, cur[0]);
+      var _b3 = v(_xSide, yTop, cur[0]);
       ctx.strokeStyle = col;
       ctx.lineWidth = 5;
       ctx.lineCap = "round";
       ctx.beginPath();
-      ctx.moveTo(_a2[0], _a2[1]);
-      ctx.lineTo(_b2[0], _b2[1]);
+      ctx.moveTo(_a3[0], _a3[1]);
+      ctx.lineTo(_b3[0], _b3[1]);
       ctx.stroke();
       // башмак
       var f1 = v(_xSide, yBase, cur[0] - 12),
@@ -4158,28 +4270,28 @@ function renderCut() {
     }
     // проволока: красная только когда режет, серая и пунктир — холодный переезд
     var hot = !st.rapid;
-    var _a3 = v(0, _P[0][1], _P[0][0]);
-    var _b3 = v(span, _P[1][1], _P[1][0]);
+    var _a4 = v(0, _P[0][1], _P[0][0]);
+    var _b4 = v(span, _P[1][1], _P[1][0]);
     ctx.beginPath();
-    ctx.moveTo(_a3[0], _a3[1]);
-    ctx.lineTo(_b3[0], _b3[1]);
+    ctx.moveTo(_a4[0], _a4[1]);
+    ctx.lineTo(_b4[0], _b4[1]);
     ctx.strokeStyle = hot ? "#ff6b6b" : "#6b7a90";
     ctx.lineWidth = hot ? 2 : 1.6;
     ctx.setLineDash(hot ? [] : [6, 5]);
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.beginPath();
-    ctx.arc(_a3[0], _a3[1], 3.5, 0, 7);
-    ctx.arc(_b3[0], _b3[1], 3.5, 0, 7);
+    ctx.arc(_a4[0], _a4[1], 3.5, 0, 7);
+    ctx.arc(_b4[0], _b4[1], 3.5, 0, 7);
     ctx.fillStyle = hot ? "#ff6b6b" : "#6b7a90";
     ctx.fill();
   } else if ($("#cShowWire").checked && C.ops.length) {
     var Q = toTowers(C.ops[0].L, C.ops[0].R);
-    var _a4 = v(0, Q[0][1], Q[0][0]);
-    var _b4 = v(span, Q[1][1], Q[1][0]);
+    var _a5 = v(0, Q[0][1], Q[0][0]);
+    var _b5 = v(span, Q[1][1], Q[1][0]);
     ctx.beginPath();
-    ctx.moveTo(_a4[0], _a4[1]);
-    ctx.lineTo(_b4[0], _b4[1]);
+    ctx.moveTo(_a5[0], _a5[1]);
+    ctx.lineTo(_b5[0], _b5[1]);
     ctx.strokeStyle = "#ff6b6b";
     ctx.lineWidth = 2;
     ctx.stroke();
@@ -4401,6 +4513,12 @@ function renderCutSync(ctx, w, h) {
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
 }
+
+/* Контур торца для рисования: профиль из базы сглаживаем, контур из CAD рисуем
+   как есть — в нём есть отверстия и прорези, сглаживание их испортит. */
+function cutOutline(pts) {
+  return CUT_SRC === "dxf" ? (pts || []).map(p => p.slice()) : smoothOutline(pts);
+}
 function renderCut2D(ctx, w, h) {
   var C = LAST;
   ctx.font = "12px Arial";
@@ -4454,7 +4572,7 @@ function renderCut2D(ctx, w, h) {
     col: "#4ea1ff"
   }];
   var _loop6 = function _loop6() {
-    var pn = _panels[_i17];
+    var pn = _panels[_i21];
     var pl = pn.cx > half ? half : 0,
       pr = pl + half;
     // у каждой башни свой масштаб: увеличение одного торца не трогает другой
@@ -4539,7 +4657,7 @@ function renderCut2D(ctx, w, h) {
     ctx.fillText("торец X0", X(B.x0) + 5, Y(B.y1) + 14);
 
     // контур (сплайн)
-    var sm = smoothOutline(pn.pts);
+    var sm = cutOutline(pn.pts);
     ctx.beginPath();
     for (var i = 0; i < sm.length; i++) {
       var q = sm[i];
@@ -4563,9 +4681,9 @@ function renderCut2D(ctx, w, h) {
         for (_iterator13.s(); !(_step13 = _iterator13.n()).done;) {
           var sp = _step13.value;
           ctx.beginPath();
-          for (var _i18 = 0; _i18 < sp.pts.length; _i18++) {
-            var _q2 = sp.pts[_i18];
-            if (_i18 === 0) ctx.moveTo(X(_q2[0]), Y(_q2[1]));else ctx.lineTo(X(_q2[0]), Y(_q2[1]));
+          for (var _i22 = 0; _i22 < sp.pts.length; _i22++) {
+            var _q2 = sp.pts[_i22];
+            if (_i22 === 0) ctx.moveTo(X(_q2[0]), Y(_q2[1]));else ctx.lineTo(X(_q2[0]), Y(_q2[1]));
           }
           if (!sp.open) ctx.closePath(); // у открытого паза грань на обводе не замыкаем
           ctx.stroke();
@@ -4589,8 +4707,8 @@ function renderCut2D(ctx, w, h) {
         ctx.lineTo(X(b[0]), Y(b[1]));
         ctx.stroke();
       };
-      for (var _i19 = 1; _i19 <= st.i && _i19 < SIM.pts.length; _i19++) {
-        seg(SIM.pts[_i19 - 1][pn.side], SIM.pts[_i19][pn.side], SIM.pts[_i19].rapid);
+      for (var _i23 = 1; _i23 <= st.i && _i23 < SIM.pts.length; _i23++) {
+        seg(SIM.pts[_i23 - 1][pn.side], SIM.pts[_i23][pn.side], SIM.pts[_i23].rapid);
       }
       if (st.f > 1e-6 && SIM.pts[st.i]) seg(SIM.pts[st.i][pn.side], pn.cur, st.rapid);
       ctx.setLineDash([]);
@@ -4630,7 +4748,7 @@ function renderCut2D(ctx, w, h) {
     ctx.fillText(pn.title, 12 + (pn.cx > half ? half : 0), 18);
     ctx.restore();
   };
-  for (var _i17 = 0, _panels = panels; _i17 < _panels.length; _i17++) {
+  for (var _i21 = 0, _panels = panels; _i21 < _panels.length; _i21++) {
     _loop6();
   }
 }
@@ -4661,8 +4779,8 @@ function parseGcode(text) {
       var rapid = g[1] === "0";
       var v = {};
       var ok = true;
-      for (var _i20 = 0, _arr5 = ["Lx", "Ly", "Rx", "Ry"]; _i20 < _arr5.length; _i20++) {
-        var k = _arr5[_i20];
+      for (var _i24 = 0, _arr5 = ["Lx", "Ly", "Rx", "Ry"]; _i24 < _arr5.length; _i24++) {
+        var k = _arr5[_i24];
         var mm = line.match(re[k]);
         if (!mm) {
           ok = false;
@@ -4787,7 +4905,7 @@ function buildGcode() {
 /* ================= заполнение форм ================= */
 function fillCutSelects() {
   var _loop7 = function _loop7() {
-    var _arr6$_i = _slicedToArray(_arr6[_i21], 2),
+    var _arr6$_i = _slicedToArray(_arr6[_i25], 2),
       id = _arr6$_i[0],
       key = _arr6$_i[1];
     var sel = $(id);
@@ -4803,7 +4921,7 @@ function fillCutSelects() {
     });
     sel.value = clamp(CFG[key].idx, 0, Math.max(0, S.profiles.length - 1));
   };
-  for (var _i21 = 0, _arr6 = [["#cRootProf", "root"], ["#cTipProf", "tip"]]; _i21 < _arr6.length; _i21++) {
+  for (var _i25 = 0, _arr6 = [["#cRootProf", "root"], ["#cTipProf", "tip"]]; _i25 < _arr6.length; _i25++) {
     if (_loop7()) continue;
   }
 }
@@ -5205,7 +5323,7 @@ function renderSparPreview() {
   }];
   var bad = [];
   var _loop8 = function _loop8() {
-    var row = _rows[_i22];
+    var row = _rows[_i26];
     var ch = row.ch,
       prof = row.prof,
       cy = row.cy;
@@ -5220,7 +5338,7 @@ function renderSparPreview() {
     ctx.setLineDash([]);
 
     // контур нервюры — сплайном
-    var sm = smoothOutline(prof.pts);
+    var sm = cutOutline(prof.pts);
     ctx.beginPath();
     for (var i = 0; i < sm.length; i++) {
       var q = sm[i];
@@ -5313,8 +5431,8 @@ function renderSparPreview() {
           ctx.lineWidth = 1.3;
           ctx.setLineDash([3, 3]);
           ctx.fillStyle = col;
-          for (var _i23 = 0, _xs = xs; _i23 < _xs.length; _i23++) {
-            var _px = _xs[_i23];
+          for (var _i27 = 0, _xs = xs; _i27 < _xs.length; _i27++) {
+            var _px = _xs[_i27];
             var fxc = clamp((_px - padL) / Math.max(1, ch * sc), 0.02, 0.98);
             var ySurf = def.side === "bottom" ? yAtX(prepHalf(hh.lower, false), fxc) * ch : yAtX(prepHalf(hh.upper, true), fxc) * ch;
             var _py = cy - ySurf * sc;
@@ -5361,7 +5479,7 @@ function renderSparPreview() {
     ctx.font = "10px Arial";
     ctx.fillText(row.name + " · хорда " + ch.toFixed(0) + " · " + sizes + " мм", padL, cy - rowH * 0.5 + 10);
   };
-  for (var _i22 = 0, _rows = rows; _i22 < _rows.length; _i22++) {
+  for (var _i26 = 0, _rows = rows; _i26 < _rows.length; _i26++) {
     _loop8();
   }
   if (info) {
@@ -5484,8 +5602,8 @@ function projSparSnap() {
     w2: +sp.w2 || 24,
     h2: +sp.h2 || 12
   };
-  for (var _i24 = 0, _arr7 = ["root", "tip", "root2", "tip2"]; _i24 < _arr7.length; _i24++) {
-    var k = _arr7[_i24];
+  for (var _i28 = 0, _arr7 = ["root", "tip", "root2", "tip2"]; _i28 < _arr7.length; _i28++) {
+    var k = _arr7[_i28];
     var v = sp[k];
     if (v && typeof v === "object") o[k] = {
       x: +v.x || 0,
@@ -5693,8 +5811,8 @@ function loadDxf() {
   try {
     var raw = JSON.parse(localStorage.getItem(LS_DXF) || "null");
     if (!raw || typeof raw !== "object") return;
-    for (var _i25 = 0, _arr8 = ["root", "tip"]; _i25 < _arr8.length; _i25++) {
-      var k = _arr8[_i25];
+    for (var _i29 = 0, _arr8 = ["root", "tip"]; _i29 < _arr8.length; _i29++) {
+      var k = _arr8[_i29];
       var d = raw[k];
       if (d && Array.isArray(d.pts) && d.pts.length > 3) {
         DXF[k] = {
@@ -5878,7 +5996,7 @@ function dxfLoadTo(key) {
         txt = _context5.v;
         // переменная обязана называться f: сборка XP подменяет это чтение
         raw = parseDxf(txt);
-        pts = normalizeImported(raw);
+        pts = profilePoly(raw);
         _context5.n = 6;
         break;
       case 5:
@@ -5940,8 +6058,8 @@ function renderDxf() {
   var i2 = $("#dxfTipInfo");
   if (i2) i2.innerHTML = dxfSideInfo("tip");
   // поля размера: заполняем из DXF, но не дёргаем, пока в них пишут
-  for (var _i26 = 0, _arr9 = [["#dxfRootCh", "root"], ["#dxfTipCh", "tip"]]; _i26 < _arr9.length; _i26++) {
-    var _arr9$_i = _slicedToArray(_arr9[_i26], 2),
+  for (var _i30 = 0, _arr9 = [["#dxfRootCh", "root"], ["#dxfTipCh", "tip"]]; _i30 < _arr9.length; _i30++) {
+    var _arr9$_i = _slicedToArray(_arr9[_i30], 2),
       id = _arr9$_i[0],
       key = _arr9$_i[1];
     var el = $(id);
@@ -6411,8 +6529,8 @@ function dxfText(name, pts, chord) {
   g(330, "0");
   g(100, "AcDbSymbolTable");
   g(70, "3");
-  for (var _i27 = 0, _arr0 = [["14", "BYBLOCK", ""], ["15", "BYLAYER", ""], ["16", "CONTINUOUS", "Solid line"]]; _i27 < _arr0.length; _i27++) {
-    var _arr0$_i = _slicedToArray(_arr0[_i27], 3),
+  for (var _i31 = 0, _arr0 = [["14", "BYBLOCK", ""], ["15", "BYLAYER", ""], ["16", "CONTINUOUS", "Solid line"]]; _i31 < _arr0.length; _i31++) {
+    var _arr0$_i = _slicedToArray(_arr0[_i31], 3),
       h = _arr0$_i[0],
       lt = _arr0$_i[1],
       desc = _arr0$_i[2];
@@ -6435,8 +6553,8 @@ function dxfText(name, pts, chord) {
   g(330, "0");
   g(100, "AcDbSymbolTable");
   g(70, "2");
-  for (var _i28 = 0, _arr1 = [["10", "0", "7"], ["11", "AIRFOIL", "3"]]; _i28 < _arr1.length; _i28++) {
-    var _arr1$_i = _slicedToArray(_arr1[_i28], 3),
+  for (var _i32 = 0, _arr1 = [["10", "0", "7"], ["11", "AIRFOIL", "3"]]; _i32 < _arr1.length; _i32++) {
+    var _arr1$_i = _slicedToArray(_arr1[_i32], 3),
       _h = _arr1$_i[0],
       lay = _arr1$_i[1],
       col = _arr1$_i[2];
@@ -6554,8 +6672,8 @@ function dxfText(name, pts, chord) {
   /* ---- BLOCKS ---- */
   g(0, "SECTION");
   g(2, "BLOCKS");
-  for (var _i29 = 0, _arr10 = [["20", "21", "*MODEL_SPACE", "1F"], ["1D", "23", "*PAPER_SPACE", "1B"]]; _i29 < _arr10.length; _i29++) {
-    var _arr10$_i = _slicedToArray(_arr10[_i29], 4),
+  for (var _i33 = 0, _arr10 = [["20", "21", "*MODEL_SPACE", "1F"], ["1D", "23", "*PAPER_SPACE", "1B"]]; _i33 < _arr10.length; _i33++) {
+    var _arr10$_i = _slicedToArray(_arr10[_i33], 4),
       bh = _arr10$_i[0],
       eh = _arr10$_i[1],
       bh2 = _arr10$_i[2],
@@ -6794,8 +6912,8 @@ function dxfEntity(pairs, i) {
     j++;
   }
   var one = code => {
-    for (var _i30 = 0, _data = data; _i30 < _data.length; _i30++) {
-      var _data$_i = _slicedToArray(_data[_i30], 2),
+    for (var _i34 = 0, _data = data; _i34 < _data.length; _i34++) {
+      var _data$_i = _slicedToArray(_data[_i34], 2),
         c = _data$_i[0],
         v = _data$_i[1];
       if (c === code) {
@@ -6978,24 +7096,24 @@ function dxfJoin(paths, tol) {
     return best;
   }
   for (var i = 0; i < live.length; i++) reg(i);
-  for (var _i31 = 0; _i31 < live.length; _i31++) {
-    if (busy[_i31]) continue;
+  for (var _i35 = 0; _i35 < live.length; _i35++) {
+    if (busy[_i35]) continue;
     for (var dir = 0; dir < 2; dir++) {
       for (var guard = 0; guard < 20000; guard++) {
-        var p = live[_i31];
+        var p = live[_i35];
         var q = dir ? p[p.length - 1] : p[0];
-        var e = find(q, _i31);
+        var e = find(q, _i35);
         if (!e) break;
         var B = live[e.i];
         if (dir === 0) {
           if (e.s === 0) B = B.slice().reverse(); // конец B должен лечь на начало A
-          live[_i31] = B.slice(0, -1).concat(p);
+          live[_i35] = B.slice(0, -1).concat(p);
         } else {
           if (e.s === 1) B = B.slice().reverse(); // начало B должно лечь на конец A
-          live[_i31] = p.concat(B.slice(1));
+          live[_i35] = p.concat(B.slice(1));
         }
         busy[e.i] = true;
-        reg(_i31);
+        reg(_i35);
       }
     }
   }
@@ -7064,8 +7182,8 @@ function dxfOutline(paths) {
     xmax = -Infinity,
     ymin = Infinity,
     ymax = -Infinity;
-  for (var _i32 = 0, _clean = clean; _i32 < _clean.length; _i32++) {
-    var p = _clean[_i32];
+  for (var _i36 = 0, _clean = clean; _i36 < _clean.length; _i36++) {
+    var p = _clean[_i36];
     var _iterator28 = _createForOfIteratorHelper(p),
       _step28;
     try {
@@ -7090,7 +7208,10 @@ function dxfOutline(paths) {
   try {
     for (_iterator29.s(); !(_step29 = _iterator29.n()).done;) {
       var ch = _step29.value;
-      var loop = dxfTrimNeck(ch, diag);
+      // Перешеек не срезаем: если отверстие соединено с обводом прорезью, это и есть
+      // готовый маршрут реза (обвод → прорезь → отверстие → обратно). Отдельные
+      // замкнутые контуры остаются отдельными цепочками, их отсеивает площадь.
+      var loop = ch;
       if (loop.length < 3) continue;
       var a = dxfArea(loop);
       if (!best || a > best.a) best = {
@@ -7261,8 +7382,8 @@ function profileFromCad(raw) {
   }
   var up = [],
     lo = [];
-  for (var _i33 = 0, _uniq = uniq; _i33 < _uniq.length; _i33++) {
-    var x = _uniq[_i33];
+  for (var _i37 = 0, _uniq = uniq; _i37 < _uniq.length; _i37++) {
+    var x = _uniq[_i37];
     var r = edgeY(x);
     if (!r) continue;
     up.push([x, r[0]]);
@@ -7272,8 +7393,8 @@ function profileFromCad(raw) {
   var y0 = (up[0][1] + lo[0][1]) / 2; // передняя кромка — середина торца
   var out = [];
   for (var i = up.length - 1; i >= 0; i--) out.push([(up[i][0] - xmin) / chord, (up[i][1] - y0) / chord]);
-  for (var _i34 = 0; _i34 < lo.length; _i34++) {
-    var q = [(lo[_i34][0] - xmin) / chord, (lo[_i34][1] - y0) / chord];
+  for (var _i38 = 0; _i38 < lo.length; _i38++) {
+    var q = [(lo[_i38][0] - xmin) / chord, (lo[_i38][1] - y0) / chord];
     var prev = out[out.length - 1];
     // плоский торец: верх и низ кромки стоят на одном x — обе точки нужны,
     // иначе толщина на торце схлопывается в ноль и контур получает «клюв»
@@ -7282,8 +7403,65 @@ function profileFromCad(raw) {
   return out;
 }
 
-/* Профиль из CAD: станции по X, верх и низ — как их видит станок. */
-
+/* Контур из CAD как есть: замкнутый обвод целиком, без «верх/низ по станциям».
+   Так до реза доходят и внутренние контуры, и прорезь к ним — ничего не теряется. */
+function profilePoly(raw) {
+  var pts = (raw || []).filter(p => Array.isArray(p) && isFinite(p[0]) && isFinite(p[1]));
+  var cl = [];
+  var _iterator34 = _createForOfIteratorHelper(pts),
+    _step34;
+  try {
+    for (_iterator34.s(); !(_step34 = _iterator34.n()).done;) {
+      var q = _step34.value;
+      if (!cl.length || Math.hypot(q[0] - cl[cl.length - 1][0], q[1] - cl[cl.length - 1][1]) > 1e-9) cl.push(q);
+    }
+  } catch (err) {
+    _iterator34.e(err);
+  } finally {
+    _iterator34.f();
+  }
+  if (cl.length > 3 && Math.hypot(cl[0][0] - cl[cl.length - 1][0], cl[0][1] - cl[cl.length - 1][1]) <= 1e-9) cl.pop();
+  pts = cl;
+  if (pts.length < 3) return null;
+  var xmin = Infinity,
+    xmax = -Infinity;
+  var _iterator35 = _createForOfIteratorHelper(pts),
+    _step35;
+  try {
+    for (_iterator35.s(); !(_step35 = _iterator35.n()).done;) {
+      var _q7 = _step35.value;
+      if (_q7[0] < xmin) xmin = _q7[0];
+      if (_q7[0] > xmax) xmax = _q7[0];
+    }
+  } catch (err) {
+    _iterator35.e(err);
+  } finally {
+    _iterator35.f();
+  }
+  var chord = xmax - xmin;
+  if (!(chord > 1e-9)) return null;
+  var eps = chord * 1e-6;
+  // начало координат по Y — середина передней кромки (там, где x = xmin)
+  var sy = 0,
+    sn = 0;
+  var _iterator36 = _createForOfIteratorHelper(pts),
+    _step36;
+  try {
+    for (_iterator36.s(); !(_step36 = _iterator36.n()).done;) {
+      var _q8 = _step36.value;
+      if (Math.abs(_q8[0] - xmin) <= eps) {
+        sy += _q8[1];
+        sn++;
+      }
+    }
+  } catch (err) {
+    _iterator36.e(err);
+  } finally {
+    _iterator36.f();
+  }
+  var y0 = sn ? sy / sn : pts[0][1];
+  return pts.map(q => [(q[0] - xmin) / chord, (q[1] - y0) / chord]);
+}
 function normalizeImported(raw) {
   var pts = profileFromCad(raw);
   if (!pts) return null;
@@ -7329,21 +7507,21 @@ var PDF_JOINT = 8; // нахлёст листов при разбиении не
 
 /* контур нервюры в мм: x — от передней кромки, y — от хорды */
 function ribContourMM(prof, chord) {
-  var pts = smoothOutline(prof && prof.pts).map(([x, y]) => [x * chord, y * chord]);
+  var pts = cutOutline(prof && prof.pts).map(([x, y]) => [x * chord, y * chord]);
   var ymin = Infinity,
     ymax = -Infinity;
-  var _iterator34 = _createForOfIteratorHelper(pts),
-    _step34;
+  var _iterator37 = _createForOfIteratorHelper(pts),
+    _step37;
   try {
-    for (_iterator34.s(); !(_step34 = _iterator34.n()).done;) {
-      var p = _step34.value;
+    for (_iterator37.s(); !(_step37 = _iterator37.n()).done;) {
+      var p = _step37.value;
       if (p[1] < ymin) ymin = p[1];
       if (p[1] > ymax) ymax = p[1];
     }
   } catch (err) {
-    _iterator34.e(err);
+    _iterator37.e(err);
   } finally {
-    _iterator34.f();
+    _iterator37.f();
   }
   return {
     pts,
@@ -7362,11 +7540,11 @@ function ribY(prof, upper, fx, chord) {
    и привязка к обводу берутся те же, что уходят в рез. */
 function ribCutoutsMM(endKey, prof, chord) {
   var out = [];
-  var _iterator35 = _createForOfIteratorHelper(sparDefsResolved()),
-    _step35;
+  var _iterator38 = _createForOfIteratorHelper(sparDefsResolved()),
+    _step38;
   try {
-    for (_iterator35.s(); !(_step35 = _iterator35.n()).done;) {
-      var def = _step35.value;
+    for (_iterator38.s(); !(_step38 = _iterator38.n()).done;) {
+      var def = _step38.value;
       var src = def[endKey] && typeof def[endKey] === "object" ? def[endKey] : {
         x: 0.3 * chord,
         y: 0
@@ -7401,7 +7579,7 @@ function ribCutoutsMM(endKey, prof, chord) {
         // устье — по самому обводу: дуга между стенками
         var _n = 24,
           arc = [];
-        for (var _i35 = 0; _i35 <= _n; _i35++) arc.push([clamp(x1 + (x2 - x1) * _i35 / _n, 0, chord), ribY(prof, up, (x1 + (x2 - x1) * _i35 / _n) / Math.max(1, chord), chord)]);
+        for (var _i39 = 0; _i39 <= _n; _i39++) arc.push([clamp(x1 + (x2 - x1) * _i39 / _n, 0, chord), ribY(prof, up, (x1 + (x2 - x1) * _i39 / _n) / Math.max(1, chord), chord)]);
         out.push({
           kind: "poly",
           yc,
@@ -7420,9 +7598,9 @@ function ribCutoutsMM(endKey, prof, chord) {
       }
     }
   } catch (err) {
-    _iterator35.e(err);
+    _iterator38.e(err);
   } finally {
-    _iterator35.f();
+    _iterator38.f();
   }
   return out;
 }
@@ -7498,8 +7676,8 @@ function ribSheetCanvas(e) {
   ctx.lineTo(X(0), Y(0) - 2.2 * P);
   ctx.moveTo(X(e.chord), Y(0));
   ctx.lineTo(X(e.chord), Y(0) - 2.2 * P);
-  for (var _i36 = 0, _arr11 = [0.25, 0.5, 0.75]; _i36 < _arr11.length; _i36++) {
-    var fr = _arr11[_i36];
+  for (var _i40 = 0, _arr11 = [0.25, 0.5, 0.75]; _i40 < _arr11.length; _i40++) {
+    var fr = _arr11[_i40];
     var xx = X(e.chord * fr);
     ctx.moveTo(xx, Y(0) - 2 * P);
     ctx.lineTo(xx, Y(0) + 2 * P);
@@ -7510,27 +7688,27 @@ function ribSheetCanvas(e) {
   ctx.font = Math.round(2.6 * P) + 'px "Segoe UI", Arial';
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
-  for (var _i37 = 0, _arr12 = [0.25, 0.5, 0.75]; _i37 < _arr12.length; _i37++) {
-    var _fr = _arr12[_i37];
+  for (var _i41 = 0, _arr12 = [0.25, 0.5, 0.75]; _i41 < _arr12.length; _i41++) {
+    var _fr = _arr12[_i41];
     ctx.fillText(String(_fr * 100), X(e.chord * _fr), Y(0) + 5.2 * P);
   }
 
   // вырезы лонжерона: штрихом, без подписей и размеров
   ctx.strokeStyle = "#111";
   ctx.lineWidth = 0.5 * P;
-  var _iterator36 = _createForOfIteratorHelper(cut),
-    _step36;
+  var _iterator39 = _createForOfIteratorHelper(cut),
+    _step39;
   try {
-    for (_iterator36.s(); !(_step36 = _iterator36.n()).done;) {
-      var c = _step36.value;
+    for (_iterator39.s(); !(_step39 = _iterator39.n()).done;) {
+      var c = _step39.value;
       dashPath(ctx, c.pts.map(p => [X(p[0]), Y(p[1])]), 2.6 * P, 1.4 * P, true);
     }
 
     // линейка 100 мм с шагом 10 — проверка масштаба после печати
   } catch (err) {
-    _iterator36.e(err);
+    _iterator39.e(err);
   } finally {
-    _iterator36.f();
+    _iterator39.f();
   }
   var barY = (topZone + ribH + 14) * P,
     barX = X(0),
@@ -7600,8 +7778,8 @@ function ribA4Pages(sheet, e) {
     }
   }
   var pages = [];
-  for (var _i38 = 0; _i38 < M; _i38++) {
-    var xS = _i38 * (printW - PDF_JOINT);
+  for (var _i42 = 0; _i42 < M; _i42++) {
+    var xS = _i42 * (printW - PDF_JOINT);
     var cv = document.createElement("canvas");
     cv.width = pW * P;
     cv.height = pH * P;
@@ -7616,7 +7794,7 @@ function ribA4Pages(sheet, e) {
     pc.textAlign = "left";
     pc.textBaseline = "alphabetic";
     pc.font = "600 " + Math.round(3.6 * P) + 'px "Segoe UI", Arial';
-    pc.fillText(e.title + " · " + (e.prof && e.prof.name || "—") + " · хорда " + Math.round(e.chord) + " мм" + (M > 1 ? " · лист " + (_i38 + 1) + " из " + M : ""), PDF_PAD * P, 10 * P);
+    pc.fillText(e.title + " · " + (e.prof && e.prof.name || "—") + " · хорда " + Math.round(e.chord) + " мм" + (M > 1 ? " · лист " + (_i42 + 1) + " из " + M : ""), PDF_PAD * P, 10 * P);
     // строка внизу листа
     pc.fillStyle = "#444";
     pc.font = Math.round(2.6 * P) + 'px "Segoe UI", Arial';
@@ -7701,8 +7879,8 @@ function ribPdf() {
     title: "КОНЦЕВАЯ НЕРВЮРА"
   }];
   var pages = [];
-  for (var _i39 = 0, _ends = ends; _i39 < _ends.length; _i39++) {
-    var e = _ends[_i39];
+  for (var _i43 = 0, _ends = ends; _i43 < _ends.length; _i43++) {
+    var e = _ends[_i43];
     ribA4Pages(ribSheetCanvas(e), e).forEach(p => pages.push(p));
   }
   var nm = ((rp.name === tp.name ? rp.name : rp.name + " - " + tp.name) || "профиль").replace(/[\\/:*?"<>|]+/g, "-").trim();
@@ -8043,23 +8221,23 @@ function init() {
   })();
   $("#pSeed").onclick = () => {
     var n = 0;
-    var _iterator37 = _createForOfIteratorHelper(seedProfiles()),
-      _step37;
+    var _iterator40 = _createForOfIteratorHelper(seedProfiles()),
+      _step40;
     try {
       var _loop1 = function _loop1() {
-        var sp = _step37.value;
+        var sp = _step40.value;
         if (!S.profiles.some(p => p.name === sp.name)) {
           S.profiles.push(sp);
           n++;
         }
       };
-      for (_iterator37.s(); !(_step37 = _iterator37.n()).done;) {
+      for (_iterator40.s(); !(_step40 = _iterator40.n()).done;) {
         _loop1();
       }
     } catch (err) {
-      _iterator37.e(err);
+      _iterator40.e(err);
     } finally {
-      _iterator37.f();
+      _iterator40.f();
     }
     saveProfiles();
     renderProfileList();
@@ -8862,21 +9040,21 @@ function fromCode() {
   $("#gMake").click();
 }
 function importFiles(files) {
-  var ok, bad, list, _iterator38, _step38, f, txt, base, p, raw, pts, ch, _raw, _pts, _ch, q, _t16, _t17;
+  var ok, bad, list, _iterator41, _step41, f, txt, base, p, raw, pts, ch, _raw, _pts, _ch, q, _t16, _t17;
   return _regeneratorAsync(function (_context1) {
     while (1) switch (_context1.p = _context1.n) {
       case 0:
         ok = 0, bad = 0;
         list = Array.from(files).filter(f => /\.(dat|txt|csv|dxf|step|stp)$/i.test(f.name));
-        _iterator38 = _createForOfIteratorHelper(list);
+        _iterator41 = _createForOfIteratorHelper(list);
         _context1.p = 1;
-        _iterator38.s();
+        _iterator41.s();
       case 2:
-        if ((_step38 = _iterator38.n()).done) {
+        if ((_step41 = _iterator41.n()).done) {
           _context1.n = 7;
           break;
         }
-        f = _step38.value;
+        f = _step41.value;
         _context1.p = 3;
         _context1.n = 4;
         return _awaitAsyncGenerator(_blobText(f));
@@ -8934,10 +9112,10 @@ function importFiles(files) {
       case 8:
         _context1.p = 8;
         _t17 = _context1.v;
-        _iterator38.e(_t17);
+        _iterator41.e(_t17);
       case 9:
         _context1.p = 9;
-        _iterator38.f();
+        _iterator41.f();
         return _context1.f(9);
       case 10:
         renderProfileList();
