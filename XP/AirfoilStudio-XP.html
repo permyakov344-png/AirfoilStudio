@@ -348,65 +348,47 @@ table.pts tr:hover td{background:#151d29}
 <!-- ============================ ПЕНОРЕЗКА ============================ -->
 <section class="tab" id="tab-cut">
   <div class="cols">
-    <div class="panel" style="width:330px;overflow:auto">
-      <div class="hd">Заготовка и концы <span class="pill" id="cPts">—</span></div>
-      <div class="hint" style="font-size:11px;line-height:1.45;margin-bottom:4px"><b>Вид и рез — со стороны
-        задней кромки:</b> слева корневая сторона заготовки и оси X,Y, справа концевая и оси A,B.
-        Нервюры всегда стоят
-        <b>на концах заготовки</b>, а башни (концы проволоки) могут быть расставлены шире её — тогда их ход
-        считается как продолжение линии «корень → конец». X = 0 — торец заготовки по хорде: в нуле обе башни
-        на одной координате, проволока прямая и лежит по торцу блока. Задняя кромка отстоит от торца
-        на «отступ до ЗК» плюс «Сдвиг X» своего торца, передняя кромка смотрит в +X.</div>
+    <div class="panel" style="width:390px;overflow:auto">
+      <div class="hd">Профили нервюр</div>
+      <div class="hint" style="font-size:11px;line-height:1.45;margin-bottom:4px">Здесь выбираются <b>профили</b>
+        корня и конца из базы и настраивается <b>лонжерон</b>. Настройки реза, заготовка, симуляция и УП —
+        в окне <b>«Пенорезка DXF»</b>.</div>
 
       <div class="row" style="gap:4px"><b style="color:var(--acc2)">Корневая нервюра · дальний торец заготовки (слева, оси X,Y)</b></div>
       <label class="fld"><b>Профиль</b><select id="cRootProf"></select></label>
       <div class="hint" style="font-size:11px;line-height:1.45">Хорда нервюры — та, что задана полем
-        «Хорда профиля, мм» в редакторе и сохранена в базе вместе с профилем.</div>
-      <div class="grid2">
-        <label class="fld"><b>Сдвиг X</b><input type="number" id="cRootX" value="0"></label>
-        <label class="fld"><b>Сдвиг Y</b><input type="number" id="cRootY" value="0"></label>
-      </div>
-      <label class="fld"><b>Угол установки, °</b><input type="number" id="cRootRot" value="0" step="0.5"></label>
+        «Хорда профиля, мм» в редакторе и сохранена в базе вместе с профилем.
+        Если на башню загружен DXF (окно «Пенорезка DXF») — режется он, а не этот профиль.</div>
 
       <div class="sep"></div>
       <div class="row" style="gap:4px"><b style="color:var(--acc)">Концевая нервюра · ближний торец заготовки (справа, оси A,B)</b></div>
       <label class="fld"><b>Профиль</b><select id="cTipProf"></select></label>
       <div class="hint" style="font-size:11px;line-height:1.45">Хорда концевой нервюры — тоже из редактора:
         сохранённое поле «Хорда профиля, мм» у выбранного профиля.</div>
-      <div class="grid2">
-        <label class="fld"><b>Сдвиг X</b><input type="number" id="cTeOff" value="0" step="1" title="Глубина задней кромки концевой нервюры — как «Сдвиг X» корня, но двигает только концевую нервюру. Разница с корневой = стреловидность по ЗК"></label>
-        <label class="fld"><b>Сдвиг Y</b><input type="number" id="cTipY" value="0"></label>
-      </div>
-      <label class="fld"><b>Угол установки, °</b><input type="number" id="cTipRot" value="0" step="0.5"></label>
-      <div class="hint" style="font-size:11px;line-height:1.45">Каждый «Сдвиг X» двигает <b>только свою нервюру</b> —
-        двигать крыло целиком можно полем «от торца до ЗК». Стреловидность по ЗК = сдвиг X концевой − сдвиг X корневой:
-        <b id="cSweepHint">0</b> мм. <b>0</b> — обе задние кромки на одной глубине (стреловидность только по передней кромке),
-        больше нуля — концевая уходит глубже в блок. Обе нервюры всегда стоят на концах заготовки.</div>
 
       <button id="cMirror" class="pri" style="width:100%;margin-top:8px"
-        title="Режешь правую консоль — нажми, и профили поменяются местами: то, что было слева (корневая нервюра), переедет вправо (концевая) и наоборот. Лонжерон переедет вместе с ними — получишь рез второй консоли">Правая ↔ левая консоль</button>
+        title="Режешь правую консоль — нажми, и профили поменяются местами: то, что было слева (корневая нервюра), переедет вправо (концевая) и наоборот. Лонжерон, сдвиги и загруженные DXF переедут вместе с ними — получишь рез второй консоли">Правая ↔ левая консоль</button>
+      <div class="hint" style="font-size:11px;line-height:1.45">Меняет местами профили, лонжерон, сдвиги торцов
+        и загруженные контуры DXF: получишь рез второй консоли.</div>
 
       <div class="sep"></div>
-      <label class="fld"><b>Расстояние между башнями, мм (100…1500)</b>
-        <input type="number" id="cSpan" value="800" min="100" max="1500" step="10">
-      </label>
-      <div class="hint" id="cSpanHint" style="font-size:11px;line-height:1.45"></div>
-      <div class="sep"></div>
-      <div class="hd" style="font-size:12px">Заготовка, мм <span class="pill" id="cBlkPill">—</span></div>
-      <div class="hint" style="font-size:11px;line-height:1.45;margin-bottom:4px">Длина — это и есть расстояние
-        между нервюрами: концевая стоит на ближнем торце (справа, у башни A,B),
-        корневая — на дальнем (слева, у башни X,Y).</div>
-      <div class="grid3">
-        <label class="fld"><b>длина</b><input type="number" id="cBl" value="800" step="10" min="10"></label>
-        <label class="fld"><b>ширина</b><input type="number" id="cBw" value="400" step="10" min="10"></label>
-        <label class="fld"><b>высота</b><input type="number" id="cBh" value="250" step="10" min="10"></label>
+      <div class="row">
+        <button id="cPrjSave" class="grow1" title="Сохранить в файл всё, из чего собирается рез: профили корня и конца с координатами, хорды, контуры DXF, лонжерон (тип, размеры, X и Y до него на каждом торце), заготовку и параметры реза. Настройки станка в проект не входят.">Сохранить проект</button>
+        <button id="cPrjOpen" title="Открыть сохранённый проект — вернутся профили, хорды, контуры DXF, лонжерон (размеры до него) и все размеры заготовки">Открыть проект</button>
+        <input type="file" id="cPrjFile" accept=".json,application/json" hidden>
       </div>
-      <label class="fld"><b>смещение заготовки от правой башни, мм</b>
-        <input type="number" id="cBzOff" value="0" step="10" title="Насколько заготовка отодвинута от башни вдоль оси башни — отсчёт от той башни, что справа, когда стоишь за задней кромкой (это башня концевой стороны). 0 = прижата к правой башне (к концевой стороне).">
-      </label>
+      <div class="hint" style="font-size:11px;line-height:1.45">Проект помнит <b>деталь</b>: профили и хорды,
+        контуры DXF (они возвращаются в «Пенорезку DXF», а не в базу), лонжерон с размерами и положением,
+        заготовку и рез. Настройки станка в проект не входят — они от детали не зависят.</div>
+      <div class="row">
+        <button id="cRibPdf" class="grow1" title="PDF на две страницы: нервюра и вырезы лонжерона в натуральную величину. Печатай в масштабе 100 %, без «вписать в страницу»">Шаблон нервюр 1:1 (PDF)</button>
+      </div>
+      <div class="hint" style="font-size:11px;line-height:1.45">Собрать УП и посмотреть симуляцию реза —
+        в окне <b>«Пенорезка DXF»</b>.</div>
+    </div>
 
-      <div class="sep"></div>
-      <div class="hd" style="font-size:12px">Лонжерон <span class="pill" id="cSparPill">нет</span></div>
+    <div class="panel grow">
+      <div class="hd">Лонжерон <span class="pill" id="cSparPill">нет</span></div>
       <label class="row" style="gap:6px;color:var(--dim);font-size:12px">
         <input type="checkbox" id="cSparOn"> резать полость лонжерона
       </label>
@@ -436,7 +418,7 @@ table.pts tr:hover td{background:#151d29}
 
       <div class="hint" style="font-size:11px;margin-top:2px">Положение на каждой нервюре — от её передней кромки (X).
         Для «2 прямоугольников» Y — <b>отступ от обвода своего контура</b>: верхний цепляется от верхнего обвода профиля,
-        нижний — от нижнего (0 — вплотную к поверхности).</div>
+        нижний — от нижнего (0 — вплотную к поверхности). Если на башню загружен DXF — отступы считаются от него.</div>
       <div class="hint" id="sparHdr1" style="display:none;font-size:11px;color:var(--acc2)">верхний прямоугольник</div>
       <div class="grid2">
         <label class="fld"><b>X корень, мм от ПК</b><input type="number" id="cSparXR" value="84" step="1" min="1"></label>
@@ -464,7 +446,106 @@ table.pts tr:hover td{background:#151d29}
         проволока заходит в неё от обвода (сверху или снизу) <b>строго по вертикали — по осевой полости</b>,
         обходит контур и тем же отвесом возвращается на обвод профиля. Отдельного врезания над блоком нет.
         Если X на концах сильно отличается, сама полость идёт по косой — при общей проволоке иначе нельзя.</div>
+    </div>
+  </div>
+</section>
 
+<!-- ============================ ПЕНОРЕЗКА DXF ============================ -->
+<section class="tab" id="tab-cutdxf">
+  <div class="cols">
+    <div class="panel" style="width:410px;overflow:auto">
+      <div class="hd">Пенорезка DXF <span class="pill" id="dxfPill">—</span><span class="pill" id="cPts">—</span></div>
+      <div class="hint" style="font-size:11px;line-height:1.45">Загрузи контур <b>.dxf</b> отдельно на каждую башню:
+        слева корневая нервюра (оси X,Y), справа концевая (оси A,B). Контур идёт сразу в рез —
+        <b>в базу профилей не добавляется</b> и в списке «Профили» не появляется.</div>
+
+      <div class="row" style="gap:4px"><b style="color:var(--acc2)">Левая башня · корневая нервюра (X,Y)</b></div>
+      <div class="row" style="gap:6px">
+        <button id="dxfRootBtn" class="pri grow1" title="Выбрать файл .dxf с контуром нервюры — он станет контуром левой башни">Загрузить DXF → левая</button>
+        <input type="file" id="dxfRootFile" accept=".dxf,application/dxf" hidden>
+        <button id="dxfRootClr" class="gh" title="Убрать загруженный контур: башня снова режется профилем из базы (окно «Пенорезка»)">убрать</button>
+      </div>
+      <label class="fld"><b>размер контура, мм</b>
+        <input type="number" id="dxfRootCh" step="0.1" min="1" placeholder="из файла"
+          title="Ширина контура в файле, мм. Если в файле нет габаритов или он не в миллиметрах — задай размер вручную"></label>
+      <div class="hint" id="dxfRootInfo" style="font-size:11px;line-height:1.45">—</div>
+
+      <div class="sep"></div>
+      <div class="row" style="gap:4px"><b style="color:var(--acc)">Правая башня · концевая нервюра (A,B)</b></div>
+      <div class="row" style="gap:6px">
+        <button id="dxfTipBtn" class="pri grow1" title="Выбрать файл .dxf с контуром нервюры — он станет контуром правой башни">Загрузить DXF → правая</button>
+        <input type="file" id="dxfTipFile" accept=".dxf,application/dxf" hidden>
+        <button id="dxfTipClr" class="gh" title="Убрать загруженный контур: башня снова режется профилем из базы (окно «Пенорезка»)">убрать</button>
+      </div>
+      <label class="fld"><b>размер контура, мм</b>
+        <input type="number" id="dxfTipCh" step="0.1" min="1" placeholder="из файла"
+          title="Ширина контура в файле, мм. Если в файле нет габаритов или он не в миллиметрах — задай размер вручную"></label>
+      <div class="hint" id="dxfTipInfo" style="font-size:11px;line-height:1.45">—</div>
+
+      <div class="sep"></div>
+      <div class="hd" style="font-size:12px">Синхронизация башен <span class="pill" id="dxfSyncPill">—</span><span class="pill" id="dxfStat">—</span></div>
+      <label class="row" style="gap:6px;color:var(--dim);font-size:12px">
+        <input type="checkbox" id="dxfSync" checked> держать башни на одном контуре
+      </label>
+      <div class="hint" style="font-size:11px;line-height:1.45">Включено: что загрузил в одну башню, встаёт и в другую —
+        обе нервюры одинаковые, рез идёт прямой призмой. Выключено: башни живут отдельно (крыло с переменным профилем),
+        а кнопки ниже переносят контур из одной башни в другую. Как идёт синхронный рез — смотри в панели
+        <b>«Симуляция» → «Синхронизация»</b>.</div>
+      <div class="row">
+        <button id="dxfCopyTip" class="grow1" title="Взять контур левой башни и поставить его на правую">левая → правая</button>
+        <button id="dxfCopyRoot" class="grow1" title="Взять контур правой башни и поставить его на левую">правая → левая</button>
+      </div>
+
+      <div class="sep"></div>
+      <div class="hd" style="font-size:12px">Настройки реза</div>
+      <div class="hint" style="font-size:11px;line-height:1.45;margin-bottom:4px"><b>Вид и рез — со стороны
+        задней кромки:</b> слева корневая сторона заготовки и оси X,Y, справа концевая и оси A,B.
+        Нервюры всегда стоят <b>на концах заготовки</b>, а башни (концы проволоки) могут быть расставлены шире её —
+        тогда их ход считается как продолжение линии «корень → конец». X = 0 — торец заготовки по хорде:
+        в нуле обе башни на одной координате, проволока прямая и лежит по торцу блока. Задняя кромка отстоит
+        от торца на «отступ до ЗК» плюс «Сдвиг X» своего торца, передняя кромка смотрит в +X.</div>
+
+      <div class="row" style="gap:4px"><b style="color:var(--acc2)">Корневая нервюра · дальний торец (слева, оси X,Y)</b></div>
+      <div class="grid2">
+        <label class="fld"><b>Сдвиг X</b><input type="number" id="cRootX" value="0"></label>
+        <label class="fld"><b>Сдвиг Y</b><input type="number" id="cRootY" value="0"></label>
+      </div>
+      <label class="fld"><b>Угол установки, °</b><input type="number" id="cRootRot" value="0" step="0.5"></label>
+
+      <div class="sep"></div>
+      <div class="row" style="gap:4px"><b style="color:var(--acc)">Концевая нервюра · ближний торец (справа, оси A,B)</b></div>
+      <div class="grid2">
+        <label class="fld"><b>Сдвиг X</b><input type="number" id="cTeOff" value="0" step="1" title="Глубина задней кромки концевой нервюры — как «Сдвиг X» корня, но двигает только концевую нервюру. Разница с корневой = стреловидность по ЗК"></label>
+        <label class="fld"><b>Сдвиг Y</b><input type="number" id="cTipY" value="0"></label>
+      </div>
+      <label class="fld"><b>Угол установки, °</b><input type="number" id="cTipRot" value="0" step="0.5"></label>
+      <div class="hint" style="font-size:11px;line-height:1.45">Каждый «Сдвиг X» двигает <b>только свою нервюру</b> —
+        двигать крыло целиком можно полем «от торца до ЗК». Стреловидность по ЗК = сдвиг X концевой − сдвиг X корневой:
+        <b id="cSweepHint">0</b> мм. <b>0</b> — обе задние кромки на одной глубине (стреловидность только по передней кромке),
+        больше нуля — концевая уходит глубже в блок. Обе нервюры всегда стоят на концах заготовки.</div>
+
+      <div class="sep"></div>
+      <label class="fld"><b>Расстояние между башнями, мм (100…1500)</b>
+        <input type="number" id="cSpan" value="800" min="100" max="1500" step="10">
+      </label>
+      <div class="hint" id="cSpanHint" style="font-size:11px;line-height:1.45"></div>
+
+      <div class="sep"></div>
+      <div class="hd" style="font-size:12px">Заготовка, мм <span class="pill" id="cBlkPill">—</span></div>
+      <div class="hint" style="font-size:11px;line-height:1.45;margin-bottom:4px">Длина — это и есть расстояние
+        между нервюрами: концевая стоит на ближнем торце (справа, у башни A,B),
+        корневая — на дальнем (слева, у башни X,Y).</div>
+      <div class="grid3">
+        <label class="fld"><b>длина</b><input type="number" id="cBl" value="800" step="10" min="10"></label>
+        <label class="fld"><b>ширина</b><input type="number" id="cBw" value="400" step="10" min="10"></label>
+        <label class="fld"><b>высота</b><input type="number" id="cBh" value="250" step="10" min="10"></label>
+      </div>
+      <label class="fld"><b>смещение заготовки от правой башни, мм</b>
+        <input type="number" id="cBzOff" value="0" step="10" title="Насколько заготовка отодвинута от башни вдоль оси башни — отсчёт от той башни, что справа, когда стоишь за задней кромкой (это башня концевой стороны). 0 = прижата к правой башне (к концевой стороне).">
+      </label>
+
+      <div class="sep"></div>
+      <div class="hd" style="font-size:12px">Параметры реза</div>
       <div class="grid2">
         <label class="fld"><b>от торца до ЗК, мм</b><input type="number" id="cFaceOff" value="10" step="1" min="0"></label>
         <label class="fld" title="Проволока после реза отезжает назад вдоль Y. 0 — не отезжает, контур после обвода сразу остаётся у задней кромки."><b>отъезд назад, мм</b><input type="number" id="cLead" value="0" step="1" min="0"></label>
@@ -473,25 +554,13 @@ table.pts tr:hover td{background:#151d29}
         <label class="fld"><b>Шаг аппрокс., мм</b><input type="number" id="cStep" value="2" step="0.5" min="0.2"></label>
         <label class="fld"><b>Подача, мм/мин</b><input type="number" id="cFeed" value="150" step="10" min="10"></label>
       </div>
+
       <div class="sep"></div>
-      <div class="row">
-        <button id="cPrjSave" class="grow1" title="Сохранить в файл всё, из чего собирается рез: профили корня и конца с координатами, хорды, лонжерон (тип, размеры, X и Y до него на каждом торце), заготовку и параметры реза. Настройки станка в проект не входят.">Сохранить проект</button>
-        <button id="cPrjOpen" title="Открыть сохранённый проект — вернутся профили, хорды, лонжерон (размеры до него) и все размеры заготовки">Открыть проект</button>
-        <input type="file" id="cPrjFile" accept=".json,application/json" hidden>
-      </div>
-      <div class="hint" style="font-size:11px;line-height:1.45">Проект помнит <b>деталь</b>: профили и хорды, лонжерон с размерами и положением
-        (X и Y до него на каждом торце), заготовку и рез. Настройки станка в проект не входят — они от детали не зависят.</div>
-      <div class="row">
-        <button id="cGen" class="pri grow1">Сформировать УП</button>
-        <button id="cSaveTap">Скачать .tap</button>
-      </div>
-      <div class="row">
-        <button id="cRibPdf" class="grow1" title="PDF на две страницы: нервюра и вырезы лонжерона в натуральную величину. Печатай в масштабе 100 %, без «вписать в страницу»">Шаблон нервюр 1:1 (PDF)</button>
-      </div>
-      <label class="row" style="gap:6px;color:var(--dim);font-size:12px">
-        <input type="checkbox" id="cShowWire" checked> показывать проволоку на превью
-      </label>
       <div class="hint" id="cWarn"></div>
+      <div class="row">
+        <button id="dxfToCut" class="grow1" title="Перейти к выбору профилей нервюр и настройке лонжерона">К пенорезке — профили и лонжерон</button>
+      </div>
+      <div class="hint" id="dxfInfo" style="font-size:11px;line-height:1.5">—</div>
     </div>
 
     <div class="panel grow">
@@ -499,6 +568,7 @@ table.pts tr:hover td{background:#151d29}
         <span class="grow1"></span>
         <button id="v3d" class="mini act">3D</button>
         <button id="v2d" class="mini">Торцы 2D</button>
+        <button id="vSync" class="mini">Синхронизация</button>
       </div>
       <div class="row" id="vTools" style="flex-wrap:wrap;gap:6px">
         <button id="vZoomOut" class="mini" style="width:28px;padding:0"
@@ -510,14 +580,14 @@ table.pts tr:hover td{background:#151d29}
         <span class="pill" id="vZoomR" style="cursor:pointer;display:none"
           title="Масштаб правой башни — щёлкни, чтобы вернуть ×1">прав. ×1.00</span>
         <span class="pill" id="vZoom3d" style="cursor:pointer;display:none"
-          title="Масштаб 3D — щёлкни, чтобы вернуть ×1">×1.00</span>
+          title="Масштаб вида — щёлкни, чтобы вернуть ×1">×1.00</span>
         <label class="hint" id="vFollowLbl" style="display:flex;gap:5px;align-items:center;margin-left:auto"
           title="При увеличении держать текущий рез в центре своего торца">
           <input type="checkbox" id="vFollow" checked> следить за резом
         </label>
         <button id="vResetView" class="mini" title="Вернуть масштаб и вид (двойной щелчок по полю)">Сброс</button>
       </div>
-      <div class="cvWrap" style="min-height:180px"><canvas id="cutCanvas"></canvas></div>
+      <div class="cvWrap" style="min-height:200px"><canvas id="cutCanvas"></canvas></div>
       <div class="row">
         <button id="simPlay" class="pri" style="width:46px;flex:0 0 46px" title="Пробел — пуск/пауза">▶</button>
         <button id="simReset" class="gh" style="flex:0 0 auto" title="В начало">⟲</button>
@@ -538,83 +608,28 @@ table.pts tr:hover td{background:#151d29}
         <span class="badge" id="cBadgeTime">—</span>
         <span class="badge" id="cBadgeSpan">—</span>
       </div>
+      <label class="row" style="gap:6px;color:var(--dim);font-size:12px">
+        <input type="checkbox" id="cShowWire" checked> показывать проволоку на превью
+      </label>
       <div class="hint" id="cSimSrc">—</div>
       <div class="hint" id="vHint">Колесо мыши — зум · перетаскивание — сдвиг (в 3D — поворот, с Shift — сдвиг) ·
         двойной щелчок — вернуть вид. В «Торцах 2D» каждая башня (левая и правая) увеличивается отдельно —
-        приближается только та, над которой стоит курсор. Сетка — 10 мм, размеры по краям — в миллиметрах.</div>
+        приближается только та, над которой стоит курсор. В <b>«Синхронизации»</b> оба торца наложены в одном
+        масштабе, между башнями видна проволока и пройденный путь — так читается, как идёт синхронный рез.
+        Сетка — 10 мм, размеры по краям — в миллиметрах.</div>
     </div>
 
     <div class="panel" style="width:380px">
       <div class="hd">Управляющая программа <button id="cCopy" class="gh" style="margin-left:auto">Копировать</button></div>
+      <div class="row">
+        <button id="cGen" class="pri grow1">Сформировать УП</button>
+        <button id="cSaveTap">Скачать .tap</button>
+      </div>
       <textarea id="cGcode" class="txt mono" spellcheck="false" placeholder="Нажми «Сформировать УП»"></textarea>
       <div class="hint" id="cGcodeInfo">—</div>
     </div>
   </div>
 </section>
-
-<!-- ============================ ПЕНОРЕЗКА DXF ============================ -->
-<section class="tab" id="tab-cutdxf">
-  <div class="cols">
-    <div class="panel" style="width:380px;overflow:auto">
-      <div class="hd">Пенорезка DXF <span class="pill" id="dxfPill">—</span></div>
-      <div class="hint" style="font-size:11px;line-height:1.45">Загрузи контур <b>.dxf</b> отдельно на каждую башню:
-        слева корневая нервюра (оси X,Y), справа концевая (оси A,B). Файл распознаётся так же, как импорт в «Профилих»,
-        становится профилем в базе и сразу уходит в рез.</div>
-
-      <div class="row" style="gap:4px"><b style="color:var(--acc2)">Левая башня · корневая нервюра (X,Y)</b></div>
-      <label class="fld"><b>Профиль</b><select id="dxfRootProf"></select></label>
-      <div class="row">
-        <button id="dxfRootBtn" class="pri grow1" title="Выбрать файл .dxf с контуром нервюры — он станет профилем левой башни">Загрузить DXF → левая</button>
-        <input type="file" id="dxfRootFile" accept=".dxf,application/dxf" hidden>
-      </div>
-      <div class="hint" id="dxfRootInfo" style="font-size:11px;line-height:1.45">—</div>
-
-      <div class="sep"></div>
-      <div class="row" style="gap:4px"><b style="color:var(--acc)">Правая башня · концевая нервюра (A,B)</b></div>
-      <label class="fld"><b>Профиль</b><select id="dxfTipProf"></select></label>
-      <div class="row">
-        <button id="dxfTipBtn" class="pri grow1" title="Выбрать файл .dxf с контуром нервюры — он станет профилем правой башни">Загрузить DXF → правая</button>
-        <input type="file" id="dxfTipFile" accept=".dxf,application/dxf" hidden>
-      </div>
-      <div class="hint" id="dxfTipInfo" style="font-size:11px;line-height:1.45">—</div>
-
-      <div class="sep"></div>
-      <div class="hd" style="font-size:12px">Синхронизация загруженных профилей <span class="pill" id="dxfSyncPill">—</span></div>
-      <label class="row" style="gap:6px;color:var(--dim);font-size:12px">
-        <input type="checkbox" id="dxfSync" checked> держать башни на одном контуре
-      </label>
-      <div class="hint" style="font-size:11px;line-height:1.45">Включено: что загрузил в одну башню, встаёт и в другую —
-        обе нервюры одинаковые, рез идёт прямой призмой. Выключено: башни живут отдельно (крыло с переменным профилем),
-        а кнопки ниже переносят контур из одной башни в другую.</div>
-      <div class="row">
-        <button id="dxfCopyTip" class="grow1" title="Взять контур левой башни и поставить его на правую">левая → правая</button>
-        <button id="dxfCopyRoot" class="grow1" title="Взять контур правой башни и поставить его на левую">правая → левая</button>
-      </div>
-
-      <div class="sep"></div>
-      <div class="row">
-        <button id="dxfGen" class="pri grow1">Сформировать УП</button>
-        <button id="dxfToCut">К пенорезке</button>
-      </div>
-      <div class="row">
-        <button id="dxfToEditor" class="grow1" title="Открыть контур в редакторе — там поле «Хорда профиля, мм», оно и задаёт размер реза">Хорда — в редакторе</button>
-      </div>
-      <div class="hint" style="font-size:11px;line-height:1.45">Отдельного поля хорды здесь нет: размер реза берётся из
-        записи профиля (поле «Хорда профиля, мм» в редакторе). Если DXF нарисован в реальных миллиметрах, хорда
-        записывается в профиль автоматически — по ширине контура в самом файле.</div>
-    </div>
-
-    <div class="panel grow">
-      <div class="hd">Оба торца в миллиметрах <span class="pill" id="dxfStat">—</span></div>
-      <div class="cvWrap" style="min-height:240px"><canvas id="dxfCanvas"></canvas></div>
-      <div class="hint" id="dxfInfo" style="font-size:11px;line-height:1.5">—</div>
-      <div class="hint" style="font-size:11px;line-height:1.45">Контуры наложены в натуральную величину: синяя линия —
-        левая башня (X,Y), оранжевая — правая (A,B); когда башни синхронны, они лежат друг на друге (пунктир сверху).
-        Сетка 10 мм, подписи по краям зелёные, линия y = 0 — хорда. Заготовка, лонжерон, подача и проект — в «Пенорезке».</div>
-    </div>
-  </div>
-</section>
-
 <!-- ============================ СТАНОК ============================ -->
 <section class="tab" id="tab-machine">
   <div class="cols">
@@ -1017,6 +1032,22 @@ var S = {
   undo: []
 };
 var LAST = null; // результат расчёта реза
+/* Контуры, загруженные в «Пенорезке DXF». Живут отдельно от базы профилей:
+   в «Профили» не попадают, в файл-базу не пишутся, индексами не хранятся —
+   каждая башня просто знает свой контур (см. endProfile()). */
+var LS_DXF = "airfoilStudio.dxf.v1";
+var DXF = {
+  root: null,
+  tip: null
+}; // { name, pts, chord, file, auto }
+/* Вид «Синхронизация» в симуляции: свой зум и сдвиг, чтобы не трогать 3D/2D.
+   VSYNC_M0 — базовая проекция последнего кадра (для зума вокруг курсора). */
+var VSYNC = {
+  zoom: 1,
+  px: 0,
+  py: 0
+};
+var VSYNC_M0 = null;
 var VIEW = {
   yaw: 142,
   pitch: 22,
@@ -3247,8 +3278,8 @@ function sparSnapPoint(def, cfg, prof, endKey) {
 function sparDefsResolved() {
   var defs = sparDefs();
   if (!CFG.spar || CFG.spar.kind !== "box2" || !defs.length) return defs;
-  var rp = S.profiles[CFG.root.idx] || S.profiles[0];
-  var tp = S.profiles[CFG.tip.idx] || S.profiles[0];
+  var rp = endProfile("root");
+  var tp = endProfile("tip");
   return defs.map(d => Object.assign({}, d, {
     root: sparSnapPoint(d, CFG.root, rp, "root"),
     tip: sparSnapPoint(d, CFG.tip, tp, "tip")
@@ -3412,9 +3443,9 @@ function fromTowers(P, M) {
   return [a, [a[0] + b[0], a[1] + b[1]]]; // k = 1 — концевой торец
 }
 function computeCut() {
-  if (!S.profiles.length) return null;
-  var rp = S.profiles[CFG.root.idx] || S.profiles[0];
-  var tp = S.profiles[CFG.tip.idx] || S.profiles[0];
+  var rp = endProfile("root");
+  var tp = endProfile("tip");
+  if (!rp || !tp) return null;
   var maxCh = Math.max(+CFG.root.chord || 1, +CFG.tip.chord || 1);
   var N = clamp(Math.ceil(maxCh / Math.max(0.2, +CFG.step || 2)) + 1, 25, 900);
   var M = towerMap(); // башни (концы проволоки) могут стоять шире заготовки
@@ -3858,6 +3889,7 @@ function zoomTxt(z) {
 }
 function setZoomLbl() {
   var is2d = VDRAW === "2d";
+  var issync = VDRAW === "sync";
   var L = $("#vZoomL"),
     R = $("#vZoomR"),
     T = $("#vZoom3d");
@@ -3873,8 +3905,9 @@ function setZoomLbl() {
     R.style.color = VIEW2.R.zoom > 1.02 ? "#ffd479" : "";
   }
   if (T) {
-    T.textContent = zoomTxt(VIEW.zoom);
-    T.style.color = Math.abs(VIEW.zoom - 1) > 0.02 ? "#ffd479" : "";
+    var z = issync ? VSYNC.zoom : VIEW.zoom;
+    T.textContent = (issync ? "синхр. " : "") + zoomTxt(z);
+    T.style.color = Math.abs(z - 1) > 0.02 ? "#ffd479" : "";
   }
 }
 
@@ -3898,6 +3931,10 @@ function renderCut() {
     h = r.h;
   if (VDRAW === "2d") {
     renderCut2D(ctx, w, h);
+    return;
+  }
+  if (VDRAW === "sync") {
+    renderCutSync(ctx, w, h);
     return;
   }
   var C = LAST;
@@ -4178,6 +4215,171 @@ function cut2dFrame(w, h, B) {
 }
 
 /* --- 2D вид торцов --- */
+/* Режим «Синхронизация»: оба торца наложены в одном масштабе (миллиметры реза),
+   между башнями — проволока, сзади — пройденный путь каждой. Так видно, как ведут
+   себя вместе: где контуры легли друг на друга, где «крутит», и куда едет проволока. */
+function renderCutSync(ctx, w, h) {
+  var C = LAST;
+  ctx.font = "12px Arial";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+  if (!C) {
+    ctx.fillStyle = "#8b9bb4";
+    ctx.fillText("Нет расчёта", 20, 30);
+    return;
+  }
+  var st = simState();
+  var B = C.block;
+  var all = C.R.pts.concat(C.T.pts, [[B.x0, B.y0], [B.x1, B.y0], [B.x1, B.y1], [B.x0, B.y1]]);
+  var m0 = makeMap(all, w, h, 44);
+  VSYNC_M0 = m0; // базовая проекция — для зума вокруг курсора
+  var z = Math.max(0.2, +VSYNC.zoom || 1); // свой зум и сдвиг — 3D/2D не трогаем
+  var map = {
+    s: m0.s * z,
+    X: x => w / 2 + (m0.X(x) - w / 2) * z + VSYNC.px,
+    Y: y => h / 2 + (m0.Y(y) - h / 2) * z + VSYNC.py,
+    inv: (px, py) => m0.inv((px - w / 2 - VSYNC.px) / z + w / 2, (py - h / 2 - VSYNC.py) / z + h / 2)
+  };
+  drawGrid(ctx, map, w, h, 1); // сетка 10 мм, подписи зелёные 12 px
+
+  // заготовка
+  ctx.save();
+  ctx.strokeStyle = "#3a4a63";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([6, 5]);
+  ctx.strokeRect(map.X(B.x0), map.Y(B.y1), (B.x1 - B.x0) * map.s, (B.y1 - B.y0) * map.s);
+  ctx.restore();
+
+  // полости лонжерона на каждом торце (если лонжерон включён)
+  if (C.spar) {
+    var _iterator12 = _createForOfIteratorHelper(C.spar),
+      _step12;
+    try {
+      for (_iterator12.s(); !(_step12 = _iterator12.n()).done;) {
+        var cv = _step12.value;
+        if (cv.sR && cv.sR.pts) drawContour(ctx, map, cv.sR.pts, {
+          color: "#2f6f57",
+          lw: 1
+        });
+        if (cv.sT && cv.sT.pts) drawContour(ctx, map, cv.sT.pts, {
+          color: "#6b5330",
+          lw: 1
+        });
+      }
+    } catch (err) {
+      _iterator12.e(err);
+    } finally {
+      _iterator12.f();
+    }
+  }
+
+  // пройденный путь каждой башни
+  var upto = st ? st.i : 0;
+  var trail = (pick, col) => {
+    ctx.save();
+    ctx.strokeStyle = col;
+    ctx.globalAlpha = 0.5;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    var started = false;
+    for (var k = 0; k <= upto && k < SIM.pts.length; k++) {
+      var p = SIM.pts[k][pick];
+      if (!p) continue;
+      var X = map.X(p[0]),
+        Y = map.Y(p[1]);
+      if (!started) {
+        ctx.moveTo(X, Y);
+        started = true;
+      } else ctx.lineTo(X, Y);
+    }
+    if (started) ctx.stroke();
+    ctx.restore();
+  };
+  trail("L", "#4ea1ff");
+  trail("R", "#ffb347");
+
+  // контуры: корень — синий, конец — оранжевый (при совпадении ложится пунктиром сверху)
+  var same = dxfSameProfile();
+  drawContour(ctx, map, C.R.pts, {
+    color: "#4ea1ff",
+    lw: 2
+  });
+  ctx.save();
+  if (same) ctx.setLineDash([7, 5]);
+  drawContour(ctx, map, C.T.pts, {
+    color: same ? "#4ea1ff" : "#ffb347",
+    lw: 2
+  });
+  ctx.restore();
+
+  // Проволока между башнями. В этом виде смотрим вдоль оси башен, поэтому проволока
+  // перпендикулярна экрану: у одинаковых торцов её проекция — точка (так и есть на деле),
+  // у разных — наклонная линия между точками башен.
+  if (st && st.L && st.R) {
+    var lx = map.X(st.L[0]),
+      ly = map.Y(st.L[1]);
+    var rx = map.X(st.R[0]),
+      ry = map.Y(st.R[1]);
+    var d = Math.hypot(rx - lx, ry - ly);
+    ctx.save();
+    if (d > 1.5) {
+      ctx.strokeStyle = "#ffd479";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath();
+      ctx.moveTo(lx, ly);
+      ctx.lineTo(rx, ry);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = "12px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+      ctx.fillStyle = "#ffd479";
+      ctx.fillText("проволока", (lx + rx) / 2, (ly + ry) / 2 - 8);
+    }
+    // Точки башен: левая — синяя, правая — оранжевая. Легли друг на друга (синхронны) —
+    // рисуем одну точку в полкруга каждого цвета: видно, что здесь обе башни сразу.
+    var mark = (x, y) => {
+      ctx.beginPath();
+      ctx.arc(x, y, 5.5, 0, Math.PI * 2);
+      ctx.fillStyle = "#4ea1ff";
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x, y, 5.5, Math.PI / 2, Math.PI * 1.5);
+      ctx.strokeStyle = "#ffb347";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(x, y, 5.5, 0, Math.PI * 2);
+      ctx.strokeStyle = "#0d131d";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    };
+    if (d < 5) mark(lx, ly);else {
+      mark(lx, ly);
+      mark(rx, ry);
+    }
+    ctx.restore();
+  }
+
+  // подписи, легенда, ход реза
+  var rp = endProfile("root"),
+    tp = endProfile("tip");
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  ctx.fillStyle = "#4ea1ff";
+  ctx.fillText("ЛЕВАЯ башня (X,Y) — «" + (rp ? rp.name : "—") + "»", 8, 6);
+  ctx.fillStyle = same ? "#4ea1ff" : "#ffb347";
+  ctx.fillText("ПРАВАЯ башня (A,B) — «" + (tp ? tp.name : "—") + "»", 8, 22);
+  ctx.fillStyle = "#ffd479";
+  ctx.fillText(same ? "контуры совпадают — прямая призма" : "контуры разные — крыло с переменным профилем", 8, 38);
+  var pr = SIM.dur > 0 ? Math.round(100 * SIM.t / SIM.dur) : 0;
+  ctx.fillStyle = "#8b9bb4";
+  ctx.textAlign = "right";
+  ctx.fillText("пройдено " + pr + " %", w - 8, 6);
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+}
 function renderCut2D(ctx, w, h) {
   var C = LAST;
   ctx.font = "12px Arial";
@@ -4334,11 +4536,11 @@ function renderCut2D(ctx, w, h) {
       ctx.strokeStyle = "#ffb454";
       ctx.lineWidth = 1.6;
       ctx.setLineDash([5, 4]);
-      var _iterator12 = _createForOfIteratorHelper(pn.spar),
-        _step12;
+      var _iterator13 = _createForOfIteratorHelper(pn.spar),
+        _step13;
       try {
-        for (_iterator12.s(); !(_step12 = _iterator12.n()).done;) {
-          var sp = _step12.value;
+        for (_iterator13.s(); !(_step13 = _iterator13.n()).done;) {
+          var sp = _step13.value;
           ctx.beginPath();
           for (var _i18 = 0; _i18 < sp.pts.length; _i18++) {
             var _q2 = sp.pts[_i18];
@@ -4348,9 +4550,9 @@ function renderCut2D(ctx, w, h) {
           ctx.stroke();
         }
       } catch (err) {
-        _iterator12.e(err);
+        _iterator13.e(err);
       } finally {
-        _iterator12.f();
+        _iterator13.f();
       }
       ctx.setLineDash([]);
     }
@@ -4426,11 +4628,11 @@ function parseGcode(text) {
     Ry: new RegExp("(?:^|\\s)[" + cand(AX.Ry, "V") + "]\\s*(-?\\d+(?:\\.\\d+)?)", "i")
   };
   var pts = [];
-  var _iterator13 = _createForOfIteratorHelper(text.split(/\r?\n/)),
-    _step13;
+  var _iterator14 = _createForOfIteratorHelper(text.split(/\r?\n/)),
+    _step14;
   try {
-    for (_iterator13.s(); !(_step13 = _iterator13.n()).done;) {
-      var raw = _step13.value;
+    for (_iterator14.s(); !(_step14 = _iterator14.n()).done;) {
+      var raw = _step14.value;
       var line = raw.replace(/\([^)]*\)/g, "").replace(/^\s*N\d+\s*/i, "").trim();
       if (!line) continue;
       var g = line.match(/^G0*([01])\b/i);
@@ -4458,16 +4660,15 @@ function parseGcode(text) {
       });
     }
   } catch (err) {
-    _iterator13.e(err);
+    _iterator14.e(err);
   } finally {
-    _iterator13.f();
+    _iterator14.f();
   }
   return pts.length > 2 ? pts : null;
 }
 
 /* --- G-код --- */
 function buildGcode() {
-  var _S$profiles$CFG$root$, _S$profiles$CFG$tip$i;
   var C = LAST;
   if (!C) return "";
   var dp = clamp(+CFG.dec || 3, 1, 4);
@@ -4478,8 +4679,8 @@ function buildGcode() {
   var L = [];
   var M = towerMap(); // нервюры на концах заготовки, башни шире её
   L.push("(Airfoil Studio - 4-axis hot wire)");
-  L.push("(root: " + (((_S$profiles$CFG$root$ = S.profiles[CFG.root.idx]) === null || _S$profiles$CFG$root$ === void 0 ? void 0 : _S$profiles$CFG$root$.name) || "?") + " chord " + CFG.root.chord + " mm)");
-  L.push("(tip : " + (((_S$profiles$CFG$tip$i = S.profiles[CFG.tip.idx]) === null || _S$profiles$CFG$tip$i === void 0 ? void 0 : _S$profiles$CFG$tip$i.name) || "?") + " chord " + CFG.tip.chord + " mm)");
+  L.push("(root: " + ((endProfile("root") || {}).name || "?") + " chord " + CFG.root.chord + " mm)");
+  L.push("(tip : " + ((endProfile("tip") || {}).name || "?") + " chord " + CFG.tip.chord + " mm)");
   L.push("(towers " + M.span + " mm apart, wire D " + CFG.wireD + " mm, kerf " + cutKerf().toFixed(2) + " mm, feed " + CFG.feed + " mm/min)");
   L.push("(block " + CFG.bl + " x " + CFG.bw + " x " + CFG.bh + " mm; ribs at block ends, X0 = block face, TE depth root " + (CFG.faceOff + (+CFG.root.x || 0)) + " / tip " + (CFG.faceOff + (+CFG.tip.x || 0)) + " mm)");
   L.push("(view from trailing edge: left tower " + AX.Lx + "," + AX.Ly + " on root side, right tower " + AX.Rx + "," + AX.Ry + " on tip side)");
@@ -4487,17 +4688,17 @@ function buildGcode() {
   L.push("G21");
   L.push("G90");
   L.push("G94");
-  var _iterator14 = _createForOfIteratorHelper(String(CFG.head || "").split(/\r?\n/)),
-    _step14;
+  var _iterator15 = _createForOfIteratorHelper(String(CFG.head || "").split(/\r?\n/)),
+    _step15;
   try {
-    for (_iterator14.s(); !(_step14 = _iterator14.n()).done;) {
-      var ln = _step14.value;
+    for (_iterator15.s(); !(_step15 = _iterator15.n()).done;) {
+      var ln = _step15.value;
       if (ln.trim()) L.push(ln.trim());
     }
   } catch (err) {
-    _iterator14.e(err);
+    _iterator15.e(err);
   } finally {
-    _iterator14.f();
+    _iterator15.f();
   }
   var AXPOS = {
     X: 0,
@@ -4543,17 +4744,17 @@ function buildGcode() {
     L.push(move(op.rapid ? "G0" : "G1", op.L, op.R, i === firstCut ? C.feed : null));
   }
   if (heated && CFG.off) L.push(CFG.off);
-  var _iterator15 = _createForOfIteratorHelper(String(CFG.foot || "").split(/\r?\n/)),
-    _step15;
+  var _iterator16 = _createForOfIteratorHelper(String(CFG.foot || "").split(/\r?\n/)),
+    _step16;
   try {
-    for (_iterator15.s(); !(_step15 = _iterator15.n()).done;) {
-      var _ln = _step15.value;
+    for (_iterator16.s(); !(_step16 = _iterator16.n()).done;) {
+      var _ln = _step16.value;
       if (_ln.trim()) L.push(_ln.trim());
     }
   } catch (err) {
-    _iterator15.e(err);
+    _iterator16.e(err);
   } finally {
-    _iterator15.f();
+    _iterator16.f();
   }
   L.push("M30");
   var out = L;
@@ -4565,21 +4766,38 @@ function buildGcode() {
 /* ================= заполнение форм ================= */
 function fillCutSelects() {
   var _loop7 = function _loop7() {
-    var _arr6$_i = _slicedToArray(_arr6[_i21], 2),
-      id = _arr6$_i[0],
-      key = _arr6$_i[1];
-    var sel = $(id);
-    sel.innerHTML = "";
-    S.profiles.forEach((p, i) => {
-      var o = document.createElement("option");
-      o.value = i;
-      o.textContent = p.name;
-      sel.appendChild(o);
-    });
-    sel.value = clamp(CFG[key].idx, 0, Math.max(0, S.profiles.length - 1));
-  };
-  for (var _i21 = 0, _arr6 = [["#cRootProf", "root"], ["#cTipProf", "tip"], ["#dxfRootProf", "root"], ["#dxfTipProf", "tip"]]; _i21 < _arr6.length; _i21++) {
-    _loop7();
+      var _arr6$_i = _slicedToArray(_arr6[_i21], 2),
+        id = _arr6$_i[0],
+        key = _arr6$_i[1];
+      var sel = $(id);
+      if (!sel) return 0; // continue
+      sel.innerHTML = "";
+      var d = DXF[key];
+      if (d && d.pts && d.pts.length > 3) {
+        // На башне загружен DXF — режется он, а не профиль из базы. Список глушим,
+        // чтобы нельзя было выбрать профиль, который в расчёте не участвует.
+        var o = document.createElement("option");
+        o.value = "";
+        o.textContent = "DXF: " + (d.name || d.file || "загруженный контур");
+        sel.appendChild(o);
+        sel.disabled = true;
+        sel.title = "Режется контур из «Пенорезки DXF» — убрать его можно там же";
+        return 0; // continue
+      }
+      sel.disabled = false;
+      sel.title = "";
+      S.profiles.forEach((p, i) => {
+        var o = document.createElement("option");
+        o.value = i;
+        o.textContent = p.name;
+        sel.appendChild(o);
+      });
+      sel.value = clamp(CFG[key].idx, 0, Math.max(0, S.profiles.length - 1));
+    },
+    _ret2;
+  for (var _i21 = 0, _arr6 = [["#cRootProf", "root"], ["#cTipProf", "tip"]]; _i21 < _arr6.length; _i21++) {
+    _ret2 = _loop7();
+    if (_ret2 === 0) continue;
   }
 }
 
@@ -4625,15 +4843,14 @@ function syncFormFromCfg() {
   $("#cSparH2").value = (_sp$h2 = sp.h2) !== null && _sp$h2 !== void 0 ? _sp$h2 : 12;
   var x2r = Math.round((_ref = (_sp$root2$x = (_sp$root3 = sp.root2) === null || _sp$root3 === void 0 ? void 0 : _sp$root3.x) !== null && _sp$root2$x !== void 0 ? _sp$root2$x : (_sp$root4 = sp.root) === null || _sp$root4 === void 0 ? void 0 : _sp$root4.x) !== null && _ref !== void 0 ? _ref : 0.3 * CFG.root.chord);
   var x2t = Math.round((_ref2 = (_sp$tip2$x = (_sp$tip3 = sp.tip2) === null || _sp$tip3 === void 0 ? void 0 : _sp$tip3.x) !== null && _sp$tip2$x !== void 0 ? _sp$tip2$x : (_sp$tip4 = sp.tip) === null || _sp$tip4 === void 0 ? void 0 : _sp$tip4.x) !== null && _ref2 !== void 0 ? _ref2 : 0.3 * CFG.tip.chord);
-  var defY2 = (idx, ch, xmm, hh) => {
-    var pr = S.profiles[idx] || S.profiles[0];
-    var t = pr ? thicknessAt(pr, xmm / Math.max(1, ch)) * ch : 0.12 * ch;
+  var defY2 = (prof, ch, xmm, hh) => {
+    var t = prof ? thicknessAt(prof, xmm / Math.max(1, ch)) * ch : 0.12 * ch;
     return -Math.max(1, Math.round(t / 2 - Math.max(2, hh || 12) / 2 - 1.5));
   };
   $("#cSparXR2").value = x2r;
   $("#cSparXT2").value = x2t;
-  $("#cSparYR2").value = (_sp$root2$y = (_sp$root5 = sp.root2) === null || _sp$root5 === void 0 ? void 0 : _sp$root5.y) !== null && _sp$root2$y !== void 0 ? _sp$root2$y : defY2(CFG.root.idx, CFG.root.chord, x2r, sp.h2);
-  $("#cSparYT2").value = (_sp$tip2$y = (_sp$tip5 = sp.tip2) === null || _sp$tip5 === void 0 ? void 0 : _sp$tip5.y) !== null && _sp$tip2$y !== void 0 ? _sp$tip2$y : defY2(CFG.tip.idx, CFG.tip.chord, x2t, sp.h2);
+  $("#cSparYR2").value = (_sp$root2$y = (_sp$root5 = sp.root2) === null || _sp$root5 === void 0 ? void 0 : _sp$root5.y) !== null && _sp$root2$y !== void 0 ? _sp$root2$y : defY2(endProfile("root"), CFG.root.chord, x2r, sp.h2);
+  $("#cSparYT2").value = (_sp$tip2$y = (_sp$tip5 = sp.tip2) === null || _sp$tip5 === void 0 ? void 0 : _sp$tip5.y) !== null && _sp$tip2$y !== void 0 ? _sp$tip2$y : defY2(endProfile("tip"), CFG.tip.chord, x2t, sp.h2);
   updateSparFields();
   var pillS = $("#cSparPill");
   if (pillS) pillS.textContent = sparPillText(sp);
@@ -4665,11 +4882,15 @@ function syncFormFromCfg() {
   fillCutSelects();
 }
 function readCutForm() {
-  CFG.root.idx = +$("#cRootProf").value || 0;
+  // селект выключен, когда на башне загружен DXF: индекс профиля базы не трогаем,
+  // иначе после снятия DXF рез молча переехал бы на чужой профиль
+  var rs = $("#cRootProf"),
+    ts = $("#cTipProf");
+  CFG.root.idx = rs && rs.disabled ? CFG.root.idx | 0 : +rs.value || 0;
   CFG.root.x = +$("#cRootX").value || 0;
   CFG.root.y = +$("#cRootY").value || 0;
   CFG.root.rot = +$("#cRootRot").value || 0;
-  CFG.tip.idx = +$("#cTipProf").value || 0;
+  CFG.tip.idx = ts && ts.disabled ? CFG.tip.idx | 0 : +ts.value || 0;
   CFG.tip.y = +$("#cTipY").value || 0;
   CFG.tip.rot = +$("#cTipRot").value || 0;
   // имена профилей: если библиотека обновится и порядок изменится, индексы найдём по имени
@@ -4788,19 +5009,13 @@ function readMachineForm() {
 }
 
 /* ================= обновление расчёта ================= */
-/* Хорды нервюр берутся из базы профилей — из поля «Хорда профиля, мм» в редакторе,
-   которое сохраняется вместе с профилем. Отдельных полей хорды в «Пенорезке» нет. */
-function profileChord(i, fb) {
-  var v = S.profiles[i] ? +S.profiles[i].chord : NaN;
-  if (isFinite(v) && v > 0) return Math.round(v * 100) / 100;
-  var f = +fb;
-  return isFinite(f) && f > 0 ? Math.round(f * 100) / 100 : DEF_CFG.root.chord;
-}
+/* Хорда торца: у загруженного DXF — свой размер (из файла или заданный вручную),
+   у профиля из базы — поле «Хорда профиля, мм» из редактора (endChord). */
 function syncChords() {
   var or = +CFG.root.chord || DEF_CFG.root.chord;
   var ot = +CFG.tip.chord || DEF_CFG.tip.chord;
-  CFG.root.chord = profileChord(CFG.root.idx, or);
-  CFG.tip.chord = profileChord(CFG.tip.idx, ot);
+  CFG.root.chord = endChord("root", or);
+  CFG.tip.chord = endChord("tip", ot);
 }
 function refreshCut(rebuild) {
   readCutForm();
@@ -4839,11 +5054,11 @@ function refreshCut(rebuild) {
   if (Math.abs(CFG.root.chord - CFG.tip.chord) < 0.5 && Math.abs(CFG.root.x - CFG.tip.x) < 0.01 && Math.abs(CFG.root.y - CFG.tip.y) < 0.01 && Math.abs(CFG.root.rot - CFG.tip.rot) < 0.01) w.push("Оба торца одинаковые — получится прямая призма.");
   if (CFG.tip.chord > CFG.root.chord) w.push("Хорда конца больше корня — проверь, так ли задумано.");
   if (CFG.spar && CFG.spar.on && LAST.spar) {
-    var _iterator16 = _createForOfIteratorHelper(LAST.spar),
-      _step16;
+    var _iterator17 = _createForOfIteratorHelper(LAST.spar),
+      _step17;
     try {
-      for (_iterator16.s(); !(_step16 = _iterator16.n()).done;) {
-        var cv = _step16.value;
+      for (_iterator17.s(); !(_step17 = _iterator17.n()).done;) {
+        var cv = _step17.value;
         var okR = cv.sR.pts.every(p => pointInPoly(p, LAST.R.pts));
         var okT = cv.sT.pts.every(p => pointInPoly(p, LAST.T.pts));
         if (!okR || !okT) {
@@ -4853,9 +5068,9 @@ function refreshCut(rebuild) {
         }
       }
     } catch (err) {
-      _iterator16.e(err);
+      _iterator17.e(err);
     } finally {
-      _iterator16.f();
+      _iterator17.f();
     }
   }
   $("#cWarn").textContent = w.join(" ");
@@ -4935,8 +5150,8 @@ function renderSparPreview() {
     h = r.h;
   var sp = CFG.spar || {};
   var info = $("#sparInfo");
-  var rp = S.profiles[CFG.root.idx] || S.profiles[0];
-  var tp = S.profiles[CFG.tip.idx] || S.profiles[0];
+  var rp = endProfile("root");
+  var tp = endProfile("tip");
   var defs = sparDefsResolved();
   if (!sp.on || !rp || !tp || !defs.length) {
     ctx.fillStyle = "#8b9bb4";
@@ -5005,11 +5220,11 @@ function renderSparPreview() {
     // полости лонжерона
     var dimY = cy + rowH * 0.28;
     var dimStep = defs.length > 1 ? 12 : 0;
-    var _iterator17 = _createForOfIteratorHelper(defs),
-      _step17;
+    var _iterator18 = _createForOfIteratorHelper(defs),
+      _step18;
     try {
       var _loop9 = function _loop9() {
-        var def = _step17.value;
+        var def = _step18.value;
         var e = def[row.key] && typeof def[row.key] === "object" ? def[row.key] : {
           x: 0.3 * ch,
           y: 0
@@ -5115,13 +5330,13 @@ function renderSparPreview() {
         ctx.fillText((def.label ? def.label + " " : "") + "X " + ex.toFixed(0) + " (" + (ex / ch * 100).toFixed(0) + "%)", (padL + sx) / 2 - 16, Math.min(my + 10, h - 3));
         dimY += dimStep;
       };
-      for (_iterator17.s(); !(_step17 = _iterator17.n()).done;) {
+      for (_iterator18.s(); !(_step18 = _iterator18.n()).done;) {
         _loop9();
       }
     } catch (err) {
-      _iterator17.e(err);
+      _iterator18.e(err);
     } finally {
-      _iterator17.f();
+      _iterator18.f();
     }
     var sizes = defs.map(d => d.kind === "box" ? "▭" + (+d.w || 24) + "×" + (+d.h || 12) : "Ø" + (+d.d || 16)).join("  ");
     ctx.fillStyle = "#8b9bb4";
@@ -5219,9 +5434,23 @@ function projEndSnap(key) {
     y: +cfg.y || 0,
     rot: +cfg.rot || 0
   };
-  if (p && p.pts && p.pts.length >= 4) {
-    out.pts = p.pts.map(q => [Math.round(q[0] * 1e5) / 1e5, Math.round(q[1] * 1e5) / 1e5]);
-    out.profChord = +p.chord || 0;
+  // Контур из «Пенорезки DXF» живёт вне базы — кладём в проект как есть и помечаем,
+  // чтобы при открытии он вернулся в «Пенорезку DXF», а не в базу профилей.
+  var d = DXF[key];
+  var src = d && d.pts && d.pts.length >= 4 ? {
+    name: d.name,
+    pts: d.pts,
+    chord: d.chord,
+    dxf: true
+  } : p;
+  if (src && src.pts && src.pts.length >= 4) {
+    if (src.dxf) {
+      out.name = src.name || out.name;
+      out.chord = Math.max(1, projNum(src.chord, out.chord));
+    }
+    out.pts = src.pts.map(q => [Math.round(q[0] * 1e5) / 1e5, Math.round(q[1] * 1e5) / 1e5]);
+    out.profChord = +src.chord || 0;
+    if (src.dxf) out.dxf = true;
   }
   return out;
 }
@@ -5277,8 +5506,8 @@ function projData() {
 /* Имя файла — по детали, чтобы в папке «Проекты» не было десятка одинаковых project.json. */
 function projFileName() {
   var clean = s => String(s || "профиль").replace(/[\\\/:*?"<>|\r\n\t]+/g, "-").replace(/\s+/g, "_").trim().slice(0, 32) || "профиль";
-  var rp = (S.profiles[CFG.root.idx] || {}).name;
-  var tp = (S.profiles[CFG.tip.idx] || {}).name;
+  var rp = (endProfile("root") || {}).name;
+  var tp = (endProfile("tip") || {}).name;
   var sp = CFG.spar || {};
   var tail = "";
   if (sp.on) {
@@ -5314,9 +5543,11 @@ function projOpen(o) {
   if (!o || typeof o !== "object" || !o.cut) throw new Error("в файле нет данных проекта");
   var c = o.cut;
   var added = 0,
-    chordFixed = 0;
+    chordFixed = 0,
+    dxfRestored = 0;
   var putProfile = src => {
     if (!src || typeof src !== "object") return -1;
+    if (src.dxf) return -2; // контур вне базы — вернём его в «Пенорезку DXF»
     var nm = String(src.name || "").trim().toLowerCase();
     var i = nm ? S.profiles.findIndex(p => String(p.name || "").trim().toLowerCase() === nm) : -1;
     if (i < 0 && Array.isArray(src.pts) && src.pts.length >= 4) {
@@ -5337,19 +5568,44 @@ function projOpen(o) {
   var setEnd = (key, src) => {
     if (!src || typeof src !== "object") return;
     var i = putProfile(src);
-    if (i < 0) i = clamp(CFG[key].idx | 0, 0, Math.max(0, S.profiles.length - 1));
+    if (i === -2) {
+      // Контур из «Пенорезки DXF»: в базу профилей не кладём — возвращаем на башню
+      var prev = DXF[key] || {};
+      DXF[key] = {
+        name: String(src.name || "DXF"),
+        pts: (src.pts || []).map(q => [+q[0] || 0, +q[1] || 0]),
+        chord: Math.max(1, projNum(src.chord, DEF_CFG[key].chord)),
+        file: prev.file || "",
+        auto: false,
+        prevChord: +prev.prevChord > 0 ? +prev.prevChord : Math.max(1, +CFG[key].chord || 0)
+      };
+      DXF_FILE[key] = DXF[key].file || "";
+      CFG[key] = Object.assign({}, DEF_CFG[key], {
+        idx: CFG[key].idx | 0,
+        chord: DXF[key].chord,
+        x: projNum(src.x, 0),
+        y: projNum(src.y, 0),
+        rot: projNum(src.rot, 0),
+        name: DXF[key].name
+      });
+      dxfRestored++;
+      return;
+    }
+    DXF[key] = null;
+    DXF_FILE[key] = ""; // проект без DXF — башня снова режется из базы
+    var idx = i < 0 ? clamp(CFG[key].idx | 0, 0, Math.max(0, S.profiles.length - 1)) : i;
     CFG[key] = Object.assign({}, DEF_CFG[key], {
-      idx: i,
+      idx: idx,
       chord: Math.max(1, projNum(src.chord, DEF_CFG[key].chord)),
       x: projNum(src.x, 0),
       y: projNum(src.y, 0),
       rot: projNum(src.rot, 0),
-      name: (S.profiles[i] || {}).name || ""
+      name: (S.profiles[idx] || {}).name || ""
     });
     // Хорда живёт в записи профиля (её задают в редакторе), но проект помнит свою:
     // если у профиля хорда уже другая — возвращаем ту, с которой резали, иначе
     // деталь получится другого размера.
-    var p = S.profiles[i];
+    var p = S.profiles[idx];
     if (p && +p.chord > 0 && Math.abs(+p.chord - CFG[key].chord) > 0.005) {
       p.chord = CFG[key].chord;
       chordFixed++;
@@ -5372,36 +5628,89 @@ function projOpen(o) {
   CFG.spar = migrateSpar(c.spar); // после хорд: обвод для «2 прямоугольников» — по ним
 
   if (added || chordFixed) saveProfiles();
+  if (dxfRestored) saveDxf(); // контуры вне базы — в их отдельном хранилище
   saveCfg(); // настройки предпочитаемые, но станок не трогаем
   renderProfileList();
   renderProfileCanvas();
   fillEditorSelect();
+  fillCutSelects();
   syncFormFromCfg();
   refreshCut();
+  renderDxf();
   $("#cGcode").value = "";
   $("#cGcodeInfo").textContent = "Проект открыт — сформируй УП заново";
   return {
     added,
-    chordFixed
+    chordFixed,
+    dxfRestored
   };
 }
 
 /* ================= вкладка «Пенорезка DXF» =================
    Загрузка контура .dxf на каждую башню отдельно: слева корневая нервюра
    (оси X,Y), справа концевая (оси A,B), плюс синхронизация загруженных
-   профилей. Включённая синхронизация держит обе башни на одном контуре
+   контуров. Включённая синхронизация держит обе башни на одном контуре
    (прямая призма), выключенная — даёт резать крыло с разными нервюрами.
    Файл разбирается тем же parseDxf, что и импорт в «Профилих», но результат
-   сразу уходит в рез, минуя список профилей. */
+   НЕ идёт в базу профилей: контур живёт в отдельном хранилище DXF (LS_DXF),
+   в «Профилих» не появляется и в файл-базу не пишется — см. endProfile(). */
 
 var DXF_FILE = {
   root: "",
   tip: ""
 }; // имена последних загруженных файлов
-var DXF_LAST = "root"; // куда загружали последним — туда откроем редактор
+var DXF_LAST = "root"; // куда загружали последним
 
-function dxfIdx(key) {
-  return clamp(CFG[key].idx | 0, 0, Math.max(0, S.profiles.length - 1));
+function saveDxf() {
+  try {
+    localStorage.setItem(LS_DXF, JSON.stringify(DXF));
+  } catch (e) {}
+}
+function loadDxf() {
+  try {
+    var raw = JSON.parse(localStorage.getItem(LS_DXF) || "null");
+    if (!raw || typeof raw !== "object") return;
+    for (var _i25 = 0, _arr8 = ["root", "tip"]; _i25 < _arr8.length; _i25++) {
+      var k = _arr8[_i25];
+      var d = raw[k];
+      if (d && Array.isArray(d.pts) && d.pts.length > 3) {
+        DXF[k] = {
+          name: String(d.name || "DXF"),
+          pts: d.pts.map(q => [+q[0] || 0, +q[1] || 0]),
+          chord: +d.chord > 0 ? +d.chord : 0,
+          file: String(d.file || ""),
+          auto: !!d.auto,
+          prevChord: +d.prevChord > 0 ? +d.prevChord : 0
+        };
+        DXF_FILE[k] = DXF[k].file;
+      }
+    }
+  } catch (e) {}
+}
+/* Профиль торца для расчёта: сначала загруженный в «Пенорезке DXF» контур
+   (он вне базы), иначе запись из базы профилей по индексу настройки. */
+function endProfile(key) {
+  var d = DXF[key];
+  if (d && d.pts && d.pts.length > 3) return {
+    name: d.name || d.file || "DXF",
+    pts: d.pts,
+    chord: +d.chord || 0,
+    dxf: true
+  };
+  var i = CFG[key].idx | 0;
+  return S.profiles[i] || S.profiles[0] || null;
+}
+/* Размер торца: из DXF (мм, как в файле либо заданный вручную), иначе из
+   записи профиля, иначе — текущий размер реза. */
+function endChord(key, fb) {
+  var d = DXF[key];
+  if (d && +d.chord > 0) return Math.round(+d.chord * 100) / 100;
+  var p = endProfile(key);
+  var v = p ? +p.chord : NaN;
+  if (isFinite(v) && v > 0) return Math.round(v * 100) / 100;
+  var f = +fb;
+  if (isFinite(f) && f > 0) return Math.round(f * 100) / 100;
+  return DEF_CFG.root.chord;
 }
 function dxfSyncOn() {
   var el = $("#dxfSync");
@@ -5414,23 +5723,24 @@ function dxfSamePts(a, b) {
   }
   return true;
 }
-/* Совпадают ли контуры двух башень — это и есть результат синхронизации,
-   его видно на холсте (оранжевая линия лежит на синей). */
+/* Совпадают ли контуры двух башень — это и есть результат синхронизации. */
 function dxfSameProfile() {
-  var r = S.profiles[dxfIdx("root")],
-    t = S.profiles[dxfIdx("tip")];
+  var r = endProfile("root"),
+    t = endProfile("tip");
   if (!r || !t) return false;
+  if (r === t) return true;
   return r.name === t.name && dxfSamePts(r.pts, t.pts);
 }
-/* Строка состояния одной башни: файл, профиль, точек, хорда. */
+/* Строка состояния одной башни: файл, имя контура, точек, размер. */
 function dxfSideInfo(key) {
-  var i = dxfIdx(key),
-    p = S.profiles[i];
-  if (!p) return "профиля нет";
-  var ch = profileChord(i, CFG[key].chord);
-  return (DXF_FILE[key] ? "файл <b>" + esc(DXF_FILE[key]) + "</b> → " : "") + "«" + esc(p.name) + "» · точек " + p.pts.length + " · хорда " + ch + " мм " + (+p.chord > 0 ? "(из записи профиля)" : "(задаётся в редакторе)");
+  var d = DXF[key],
+    p = endProfile(key);
+  if (!p) return "контура нет";
+  var ch = endChord(key, CFG[key].chord);
+  var isDxf = !!(d && d.pts && d.pts.length > 3);
+  return (isDxf ? "DXF <b>" + esc(DXF_FILE[key] || d.file || "") + "</b> → " : "профиль из базы → ") + "«" + esc(p.name) + "» · точек " + p.pts.length + " · размер " + ch + " мм " + (isDxf ? d.auto ? "(из файла)" : "(задан)" : "(из записи профиля)");
 }
-/* Всё, что меняет профили башен: пересобрать расчёт, сбросить УП, перерисовать. */
+/* Всё, что меняет контуры башен: пересобрать расчёт, сбросить УП, перерисовать. */
 function dxfChanged(msg) {
   fillCutSelects();
   var gc = $("#cGcode");
@@ -5439,60 +5749,82 @@ function dxfChanged(msg) {
   if (gi) gi.textContent = "Параметры изменены — сформируй УП заново";
   refreshCut();
   saveCfg();
+  saveDxf();
   renderProfileCanvas();
   renderDxf();
   if (msg) toast(msg);
 }
-/* Выбор профиля на башне; при включённой синхронизации — сразу на обеих. */
-function dxfPick(key, idx) {
-  idx = clamp(idx | 0, 0, Math.max(0, S.profiles.length - 1));
-  var keys = dxfSyncOn() ? ["root", "tip"] : [key];
-  keys.forEach(k => {
-    CFG[k].idx = idx;
-    CFG[k].name = (S.profiles[idx] || {}).name || "";
-  });
-  DXF_LAST = key;
-  dxfChanged(keys.length > 1 ? "Профиль «" + ((S.profiles[idx] || {}).name || "") + "» встал на обе башни" : "");
-}
-/* Перенос контура с одной башни на другую. */
+/* Перенос контура с одной башни на другую (оба — вне базы). */
 function dxfCopy(from, to) {
-  var i = dxfIdx(from),
-    p = S.profiles[i];
-  if (!p) return toast("На башне нет профиля");
-  CFG[to].idx = i;
-  CFG[to].name = p.name;
+  var src = DXF[from];
+  if (!src || !src.pts || src.pts.length < 4) return toast("На башне нет загруженного DXF");
+  DXF[to] = {
+    name: src.name,
+    pts: src.pts,
+    chord: src.chord,
+    file: src.file,
+    auto: src.auto,
+    prevChord: +DXF[to] && +DXF[to].prevChord > 0 ? +DXF[to].prevChord : Math.max(1, +CFG[to].chord || 0)
+  };
   DXF_FILE[to] = DXF_FILE[from] || "";
-  dxfChanged((from === "root" ? "Левая → правая" : "Правая → левая") + ": «" + p.name + "»");
+  dxfChanged((from === "root" ? "Левая → правая" : "Правая → левая") + ": «" + src.name + "»");
+}
+/* Убрать DXF с башни: башня снова режется профилем из базы (окно «Пенорезка»).
+   При включённой синхронизации убираем с обеих — иначе башни разъедутся. */
+function dxfClear(key) {
+  if (!DXF[key]) return toast("Здесь и так профиль из базы");
+  var keys = dxfSyncOn() ? ["root", "tip"] : [key];
+  var prev = {};
+  keys.forEach(k => {
+    prev[k] = DXF[k] && +DXF[k].prevChord > 0 ? +DXF[k].prevChord : 0; // размер реза до этого DXF
+    DXF[k] = null;
+    DXF_FILE[k] = "";
+  });
+  keys.forEach(k => {
+    if (prev[k] > 0) CFG[k].chord = prev[k];
+  }); // башня возвращается к прежнему размеру
+  dxfChanged(keys.length > 1 ? "DXF убран с обеих башен — снова профили из базы" : "DXF убран — башня снова режется профилем из базы");
+}
+/* Размер контура вручную — когда в файле нет габаритов или файл не в миллиметрах. */
+function dxfSetChord(key, v) {
+  var d = DXF[key];
+  if (!d) return;
+  var ch = Math.max(1, Math.round((+v || 0) * 100) / 100);
+  if (Math.abs(ch - (+d.chord || 0)) < 0.005) return;
+  d.chord = ch;
+  d.auto = false;
+  dxfChanged("Размер контура: " + ch + " мм");
 }
 /* Размер контура в самом файле, мм. DXF и STEP приходят в реальных миллиметрах,
    поэтому ширина контура по X — это и есть хорда. Меньше 10 мм — файл без размеров
-   (единицы не миллиметры), тогда хорда остаётся та, что в записи профиля. */
+   (единицы не миллиметры), тогда размер берётся из настройки реза. */
 function rawChordMM(raw) {
   if (!raw || raw.length < 4) return null;
   var xmin = Infinity,
     xmax = -Infinity;
-  var _iterator18 = _createForOfIteratorHelper(raw),
-    _step18;
+  var _iterator19 = _createForOfIteratorHelper(raw),
+    _step19;
   try {
-    for (_iterator18.s(); !(_step18 = _iterator18.n()).done;) {
-      var q = _step18.value;
+    for (_iterator19.s(); !(_step19 = _iterator19.n()).done;) {
+      var q = _step19.value;
       if (q && isFinite(q[0])) {
         if (q[0] < xmin) xmin = q[0];
         if (q[0] > xmax) xmax = q[0];
       }
     }
   } catch (err) {
-    _iterator18.e(err);
+    _iterator19.e(err);
   } finally {
-    _iterator18.f();
+    _iterator19.f();
   }
   var ch = xmax - xmin;
   if (!isFinite(ch) || ch < 10 || ch > 20000) return null;
   return Math.round(ch * 100) / 100;
 }
-/* Загрузка файла: разбор → профиль в базе → на башню (при синхронизации — на обе). */
+/* Загрузка файла: разбор → контур на башню (при синхронизации — на обе).
+   В базу профилей ничего не добавляется и не сохраняется. */
 function dxfLoadTo(key) {
-  var inp, f, raw, pts, txt, base, ch, idx, i, what, _p4, p, keys, msg, _t7;
+  var inp, f, raw, pts, txt, base, ch, rec, keys, msg, _t7;
   return _regeneratorAsync(function (_context5) {
     while (1) switch (_context5.p = _context5.n) {
       case 0:
@@ -5534,142 +5866,88 @@ function dxfLoadTo(key) {
         return _context5.a(2, toast("Не распознал контур в «" + f.name + "» — нужен DXF с полилинией (LWPOLYLINE или POLYLINE)"));
       case 7:
         base = f.name.replace(/\.[^.]+$/, "").trim() || "профиль";
-        ch = rawChordMM(raw); // хорда по ширине контура в файле, если файл в миллиметрах
-        idx = -1;
-        i = 0;
-      case 8:
-        if (!(i < S.profiles.length)) {
-          _context5.n = 10;
-          break;
-        }
-        if (!((S.profiles[i].name || "").trim().toLowerCase() === base.toLowerCase())) {
-          _context5.n = 9;
-          break;
-        }
-        idx = i;
-        return _context5.a(3, 10);
-      case 9:
-        i++;
-        _context5.n = 8;
-        break;
-      case 10:
-        if (idx >= 0 && dxfSamePts(S.profiles[idx].pts, pts)) {
-          // тот же контур уже в базе — дубль не плодим, но размер из файла главный
-          what = "";
-          if (ch && +S.profiles[idx].chord !== ch) {
-            S.profiles[idx].chord = ch;
-            saveProfiles();
-            what = " · хорда обновлена " + ch + " мм";
-          }
-        } else {
-          _p4 = {
-            name: uniqueProfileName(base),
-            pts,
-            src: "edit"
-          };
-          if (ch) _p4.chord = ch;
-          idx = S.profiles.length;
-          addProfile(_p4, true); // addProfile сам сохраняет базу и пересобирает списки
-          what = " · хорда " + (ch ? ch + " мм из файла" : "берётся из записи");
-        }
-        p = S.profiles[idx];
+        ch = rawChordMM(raw); // ширина контура в файле = размер в мм, если файл в миллиметрах
+        rec = {
+          name: base,
+          pts: pts,
+          chord: ch || Math.max(1, +CFG[key].chord || 250),
+          file: f.name,
+          auto: !!ch
+        };
         DXF_LAST = key;
         keys = dxfSyncOn() ? ["root", "tip"] : [key];
         keys.forEach(k => {
-          CFG[k].idx = idx;
-          CFG[k].name = p.name;
+          var old = DXF[k];
+          DXF[k] = {
+            name: rec.name,
+            pts: rec.pts,
+            chord: rec.chord,
+            file: rec.file,
+            auto: rec.auto,
+            // размер реза до этого DXF — вернём, когда контур уберут с башни
+            prevChord: old && +old.prevChord > 0 ? +old.prevChord : Math.max(1, +CFG[k].chord || 0)
+          };
           DXF_FILE[k] = f.name;
         });
-        msg = "Загружено на " + (key === "root" ? "левую" : "правую") + " башню: «" + p.name + "»" + what;
+        msg = "Загружено на " + (key === "root" ? "левую" : "правую") + " башню: «" + base + "» · точек " + pts.length;
+        msg += ch ? " · размер " + ch + " мм из файла" : " · в файле нет размеров — взял текущий размер реза";
         if (keys.length > 1) msg += " · синхронно и на вторую башню";
+        msg += " · в базу профилей не добавлено";
         dxfChanged(msg);
-      case 11:
+      case 8:
         return _context5.a(2);
     }
   }, null, null, [[3, 5]], Promise);
 }
 function renderDxf() {
   var mp = $("#dxfPill");
-  if (mp) mp.textContent = "хорда " + profileChord(dxfIdx("root"), CFG.root.chord) + " → " + profileChord(dxfIdx("tip"), CFG.tip.chord) + " мм";
+  if (mp) mp.textContent = "размер " + endChord("root", CFG.root.chord) + " → " + endChord("tip", CFG.tip.chord) + " мм";
   var sp = $("#dxfSyncPill");
   if (sp) sp.textContent = dxfSyncOn() ? "держать вместе" : "независимо";
   var same = dxfSameProfile();
   var st = $("#dxfStat");
-  if (st) st.textContent = S.profiles.length ? same ? "контуры совпадают" : "разные контуры" : "—";
+  if (st) st.textContent = DXF.root || DXF.tip || S.profiles.length ? same ? "контуры совпадают" : "разные контуры" : "—";
   var i1 = $("#dxfRootInfo");
   if (i1) i1.innerHTML = dxfSideInfo("root");
   var i2 = $("#dxfTipInfo");
   if (i2) i2.innerHTML = dxfSideInfo("tip");
+  // поля размера: заполняем из DXF, но не дёргаем, пока в них пишут
+  for (var _i26 = 0, _arr9 = [["#dxfRootCh", "root"], ["#dxfTipCh", "tip"]]; _i26 < _arr9.length; _i26++) {
+    var _arr9$_i = _slicedToArray(_arr9[_i26], 2),
+      id = _arr9$_i[0],
+      key = _arr9$_i[1];
+    var el = $(id);
+    if (!el || document.activeElement === el) continue;
+    var d = DXF[key];
+    el.disabled = !d;
+    el.value = d ? +d.chord || "" : "";
+  }
+  var cr = $("#dxfRootClr");
+  if (cr) cr.disabled = !DXF.root;
+  var ct = $("#dxfTipClr");
+  if (ct) ct.disabled = !DXF.tip;
+  var cc = $("#dxfCopyTip");
+  if (cc) cc.disabled = !DXF.root;
+  var c2 = $("#dxfCopyRoot");
+  if (c2) c2.disabled = !DXF.tip;
   var inf = $("#dxfInfo");
   if (inf) {
-    inf.innerHTML = "<b>Левая башня (X,Y):</b> " + dxfSideInfo("root") + "<br>" + "<b>Правая башня (A,B):</b> " + dxfSideInfo("tip") + "<br>" + (same ? "<b>Синхронизация:</b> контуры совпадают — обе нервюры одинаковые, рез идёт прямой призмой." : "<b>Синхронизация:</b> контуры разные — рез идёт по двум разным нервюрам (крыло с переменным профилем).");
+    inf.innerHTML = "<b>Синхронизация:</b> " + (same ? "контуры совпадают — обе нервюры одинаковые, рез идёт прямой призмой." : "контуры разные — рез идёт по двум разным нервюрам (крыло с переменным профилем).") + "<br><b>Режется</b> то, что показано в списке окна «Пенорезка»: если DXF не загружен, башня работает с профилем из базы.";
   }
-  renderDxfCanvas();
 }
-/* Оба контура в мм, наложенные друг на другу: так видно и совпадение башень,
-   и разницу в размере. Сетка — 10 мм, подписи зелёные 12 px (drawGrid). */
-function renderDxfCanvas() {
-  var cv = $("#dxfCanvas");
-  var r = setupCanvas(cv);
-  if (!r) return; // вкладка ещё не показана или холст не размерен
-  var ctx = r.ctx,
-    w = r.w,
-    h = r.h;
-  var ri = dxfIdx("root"),
-    ti = dxfIdx("tip");
-  var rp = S.profiles[ri],
-    tp = S.profiles[ti];
-  var cr = profileChord(ri, CFG.root.chord),
-    ct = profileChord(ti, CFG.tip.chord);
-  var toMM = (p, ch) => p && p.pts && p.pts.length ? p.pts.map(q => [q[0] * ch, q[1] * ch]) : null;
-  var A = toMM(rp, cr),
-    B = toMM(tp, ct);
-  var all = (A || []).concat(B || []);
-  if (all.length < 3) {
-    ctx.fillStyle = "#8b9bb4";
-    ctx.font = "13px Arial";
-    ctx.fillText("Нет профиля", 16, 26);
-    return;
-  }
-  all.push([0, 0]);
-  var map = makeMap(all, w, h, 34);
-  drawGrid(ctx, map, w, h, 1); // сетка в миллиметрах: клетка 10 мм
-  ctx.strokeStyle = "#3a4a63";
-  ctx.lineWidth = 1; // хорда y = 0 — до самой длинной нервюры
-  ctx.beginPath();
-  ctx.moveTo(map.X(0), map.Y(0));
-  ctx.lineTo(map.X(Math.max(cr, ct)), map.Y(0));
-  ctx.stroke();
-  var same = dxfSameProfile();
-  if (A) drawContour(ctx, map, A, {
-    color: "#4ea1ff",
-    lw: 2
-  });
-  if (B) {
-    ctx.save();
-    if (same) ctx.setLineDash([7, 5]); // совпали — пунктир лежит ровно на синей линии
-    drawContour(ctx, map, B, {
-      color: same ? "#4ea1ff" : "#ffb347",
-      lw: 2
-    });
-    ctx.restore();
-  }
-  ctx.font = "12px Arial";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "top";
-  ctx.fillStyle = "#4ea1ff";
-  ctx.fillText("левая (X,Y) — " + (rp ? rp.name : "—"), 8, 6);
-  ctx.fillStyle = same ? "#4ea1ff" : "#ffb347";
-  ctx.fillText("правая (A,B) — " + (tp ? tp.name : "—"), 8, 22);
-  ctx.textBaseline = "alphabetic";
-}
-
 /* ================= вкладки ================= */
 function switchTab(name) {
   $$("#tabs button").forEach(b => b.classList.toggle("act", b.dataset.tab === name));
   $$("section.tab").forEach(s => s.classList.toggle("act", s.id === "tab-" + name));
   layoutAllCols(); // размеры панелей новой вкладки — до отрисовки холстов
-  if (name === "cutdxf") renderDxf(); // сразу, синхронно: холст должен быть готов без ожидания кадра
+  // Симуляция и настройки реза живут в «Пенорезке DXF»: считаем и рисуем сразу,
+  // синхронно — холст должен быть готов без ожидания кадра (иначе остаётся 300×150)
+  if (name === "cut" || name === "cutdxf") {
+    refreshCut(false);
+    renderCut();
+    renderSparPreview();
+  }
+  if (name === "cutdxf") renderDxf();
   requestAnimationFrame(() => {
     if (name === "profiles") {
       renderProfileList();
@@ -5678,12 +5956,10 @@ function switchTab(name) {
     if (name === "editor") {
       renderEditor();
     }
-    if (name === "cut") {
-      refreshCut(false);
-    }
-    if (name === "cutdxf") {
-      renderDxf();
-    }
+    if (name === "cut" || name === "cutdxf") {
+      renderCut();
+    } // повторно: кадр подтвердил размеры
+    if (name === "cutdxf") renderDxf();
   });
 }
 
@@ -5813,19 +6089,19 @@ function downloadBlob(name, blob) {
 function datText(name, pts, chord) {
   var ch = +chord || 1;
   var L = [name];
-  var _iterator19 = _createForOfIteratorHelper(pts),
-    _step19;
+  var _iterator20 = _createForOfIteratorHelper(pts),
+    _step20;
   try {
-    for (_iterator19.s(); !(_step19 = _iterator19.n()).done;) {
-      var _step19$value = _slicedToArray(_step19.value, 2),
-        x = _step19$value[0],
-        y = _step19$value[1];
+    for (_iterator20.s(); !(_step20 = _iterator20.n()).done;) {
+      var _step20$value = _slicedToArray(_step20.value, 2),
+        x = _step20$value[0],
+        y = _step20$value[1];
       L.push((x * ch).toFixed(6) + "  " + (y * ch).toFixed(6));
     }
   } catch (err) {
-    _iterator19.e(err);
+    _iterator20.e(err);
   } finally {
-    _iterator19.f();
+    _iterator20.f();
   }
   return L.join("\n") + "\n";
 }
@@ -5884,22 +6160,22 @@ function dxfText(name, pts, chord) {
     xmax = -Infinity,
     ymin = Infinity,
     ymax = -Infinity;
-  var _iterator20 = _createForOfIteratorHelper(P),
-    _step20;
+  var _iterator21 = _createForOfIteratorHelper(P),
+    _step21;
   try {
-    for (_iterator20.s(); !(_step20 = _iterator20.n()).done;) {
-      var _step20$value = _slicedToArray(_step20.value, 2),
-        x = _step20$value[0],
-        y = _step20$value[1];
+    for (_iterator21.s(); !(_step21 = _iterator21.n()).done;) {
+      var _step21$value = _slicedToArray(_step21.value, 2),
+        x = _step21$value[0],
+        y = _step21$value[1];
       if (x < xmin) xmin = x;
       if (x > xmax) xmax = x;
       if (y < ymin) ymin = y;
       if (y > ymax) ymax = y;
     }
   } catch (err) {
-    _iterator20.e(err);
+    _iterator21.e(err);
   } finally {
-    _iterator20.f();
+    _iterator21.f();
   }
   var f = v => (Math.round(v * 1e6) / 1e6).toFixed(6);
   var clean = t => String(t || "AIRFOIL").replace(/[^\wа-яА-Я .\-]+/gi, "").trim().toUpperCase().slice(0, 40) || "AIRFOIL";
@@ -6006,11 +6282,11 @@ function dxfText(name, pts, chord) {
   g(330, "0");
   g(100, "AcDbSymbolTable");
   g(70, "3");
-  for (var _i25 = 0, _arr8 = [["14", "BYBLOCK", ""], ["15", "BYLAYER", ""], ["16", "CONTINUOUS", "Solid line"]]; _i25 < _arr8.length; _i25++) {
-    var _arr8$_i = _slicedToArray(_arr8[_i25], 3),
-      h = _arr8$_i[0],
-      lt = _arr8$_i[1],
-      desc = _arr8$_i[2];
+  for (var _i27 = 0, _arr0 = [["14", "BYBLOCK", ""], ["15", "BYLAYER", ""], ["16", "CONTINUOUS", "Solid line"]]; _i27 < _arr0.length; _i27++) {
+    var _arr0$_i = _slicedToArray(_arr0[_i27], 3),
+      h = _arr0$_i[0],
+      lt = _arr0$_i[1],
+      desc = _arr0$_i[2];
     g(0, "LTYPE");
     g(5, h);
     g(330, "5");
@@ -6030,11 +6306,11 @@ function dxfText(name, pts, chord) {
   g(330, "0");
   g(100, "AcDbSymbolTable");
   g(70, "2");
-  for (var _i26 = 0, _arr9 = [["10", "0", "7"], ["11", "AIRFOIL", "3"]]; _i26 < _arr9.length; _i26++) {
-    var _arr9$_i = _slicedToArray(_arr9[_i26], 3),
-      _h = _arr9$_i[0],
-      lay = _arr9$_i[1],
-      col = _arr9$_i[2];
+  for (var _i28 = 0, _arr1 = [["10", "0", "7"], ["11", "AIRFOIL", "3"]]; _i28 < _arr1.length; _i28++) {
+    var _arr1$_i = _slicedToArray(_arr1[_i28], 3),
+      _h = _arr1$_i[0],
+      lay = _arr1$_i[1],
+      col = _arr1$_i[2];
     g(0, "LAYER");
     g(5, _h);
     g(330, "2");
@@ -6149,12 +6425,12 @@ function dxfText(name, pts, chord) {
   /* ---- BLOCKS ---- */
   g(0, "SECTION");
   g(2, "BLOCKS");
-  for (var _i27 = 0, _arr0 = [["20", "21", "*MODEL_SPACE", "1F"], ["1D", "23", "*PAPER_SPACE", "1B"]]; _i27 < _arr0.length; _i27++) {
-    var _arr0$_i = _slicedToArray(_arr0[_i27], 4),
-      bh = _arr0$_i[0],
-      eh = _arr0$_i[1],
-      bh2 = _arr0$_i[2],
-      brH = _arr0$_i[3];
+  for (var _i29 = 0, _arr10 = [["20", "21", "*MODEL_SPACE", "1F"], ["1D", "23", "*PAPER_SPACE", "1B"]]; _i29 < _arr10.length; _i29++) {
+    var _arr10$_i = _slicedToArray(_arr10[_i29], 4),
+      bh = _arr10$_i[0],
+      eh = _arr10$_i[1],
+      bh2 = _arr10$_i[2],
+      brH = _arr10$_i[3];
     g(0, "BLOCK");
     g(5, bh);
     g(330, brH);
@@ -6190,20 +6466,20 @@ function dxfText(name, pts, chord) {
   g(90, String(P.length));
   g(70, "1");
   g(43, f(0));
-  var _iterator21 = _createForOfIteratorHelper(P),
-    _step21;
+  var _iterator22 = _createForOfIteratorHelper(P),
+    _step22;
   try {
-    for (_iterator21.s(); !(_step21 = _iterator21.n()).done;) {
-      var _step21$value = _slicedToArray(_step21.value, 2),
-        _x3 = _step21$value[0],
-        _y2 = _step21$value[1];
+    for (_iterator22.s(); !(_step22 = _iterator22.n()).done;) {
+      var _step22$value = _slicedToArray(_step22.value, 2),
+        _x3 = _step22$value[0],
+        _y2 = _step22$value[1];
       g(10, f(_x3));
       g(20, f(_y2));
     }
   } catch (err) {
-    _iterator21.e(err);
+    _iterator22.e(err);
   } finally {
-    _iterator21.f();
+    _iterator22.f();
   }
   g(0, "ENDSEC");
 
@@ -6294,13 +6570,13 @@ function parseDxf(text) {
   var cur = null,
     ent = "",
     vert = false;
-  var _iterator22 = _createForOfIteratorHelper(pairs),
-    _step22;
+  var _iterator23 = _createForOfIteratorHelper(pairs),
+    _step23;
   try {
-    for (_iterator22.s(); !(_step22 = _iterator22.n()).done;) {
-      var _step22$value = _slicedToArray(_step22.value, 2),
-        code = _step22$value[0],
-        val = _step22$value[1];
+    for (_iterator23.s(); !(_step23 = _iterator23.n()).done;) {
+      var _step23$value = _slicedToArray(_step23.value, 2),
+        code = _step23$value[0],
+        val = _step23$value[1];
       if (code === 0) {
         ent = val.toUpperCase();
         if (ent === "POLYLINE") {
@@ -6326,13 +6602,13 @@ function parseDxf(text) {
       }
     }
   } catch (err) {
-    _iterator22.e(err);
+    _iterator23.e(err);
   } finally {
-    _iterator22.f();
+    _iterator23.f();
   }
   var best = null;
-  for (var _i28 = 0, _polys = polys; _i28 < _polys.length; _i28++) {
-    var p = _polys[_i28];
+  for (var _i30 = 0, _polys = polys; _i30 < _polys.length; _i30++) {
+    var p = _polys[_i30];
     var clean = p.filter(q => isFinite(q[0]) && isFinite(q[1]));
     if (clean.length >= 3 && (!best || clean.length > best.length)) best = clean;
   }
@@ -6360,17 +6636,17 @@ function parseStep(text) {
   }
   var pts = [];
   if (best) {
-    var _iterator23 = _createForOfIteratorHelper(best),
-      _step23;
+    var _iterator24 = _createForOfIteratorHelper(best),
+      _step24;
     try {
-      for (_iterator23.s(); !(_step23 = _iterator23.n()).done;) {
-        var id = _step23.value;
+      for (_iterator24.s(); !(_step24 = _iterator24.n()).done;) {
+        var id = _step24.value;
         if (byId[id]) pts.push(byId[id]);
       }
     } catch (err) {
-      _iterator23.e(err);
+      _iterator24.e(err);
     } finally {
-      _iterator23.f();
+      _iterator24.f();
     }
   }
   if (pts.length < 4) pts = order.map(id => byId[id]);
@@ -6427,18 +6703,18 @@ function ribContourMM(prof, chord) {
   var pts = smoothOutline(prof && prof.pts).map(([x, y]) => [x * chord, y * chord]);
   var ymin = Infinity,
     ymax = -Infinity;
-  var _iterator24 = _createForOfIteratorHelper(pts),
-    _step24;
+  var _iterator25 = _createForOfIteratorHelper(pts),
+    _step25;
   try {
-    for (_iterator24.s(); !(_step24 = _iterator24.n()).done;) {
-      var p = _step24.value;
+    for (_iterator25.s(); !(_step25 = _iterator25.n()).done;) {
+      var p = _step25.value;
       if (p[1] < ymin) ymin = p[1];
       if (p[1] > ymax) ymax = p[1];
     }
   } catch (err) {
-    _iterator24.e(err);
+    _iterator25.e(err);
   } finally {
-    _iterator24.f();
+    _iterator25.f();
   }
   return {
     pts,
@@ -6457,11 +6733,11 @@ function ribY(prof, upper, fx, chord) {
    и привязка к обводу берутся те же, что уходят в рез. */
 function ribCutoutsMM(endKey, prof, chord) {
   var out = [];
-  var _iterator25 = _createForOfIteratorHelper(sparDefsResolved()),
-    _step25;
+  var _iterator26 = _createForOfIteratorHelper(sparDefsResolved()),
+    _step26;
   try {
-    for (_iterator25.s(); !(_step25 = _iterator25.n()).done;) {
-      var def = _step25.value;
+    for (_iterator26.s(); !(_step26 = _iterator26.n()).done;) {
+      var def = _step26.value;
       var src = def[endKey] && typeof def[endKey] === "object" ? def[endKey] : {
         x: 0.3 * chord,
         y: 0
@@ -6496,7 +6772,7 @@ function ribCutoutsMM(endKey, prof, chord) {
         // устье — по самому обводу: дуга между стенками
         var _n = 24,
           arc = [];
-        for (var _i29 = 0; _i29 <= _n; _i29++) arc.push([clamp(x1 + (x2 - x1) * _i29 / _n, 0, chord), ribY(prof, up, (x1 + (x2 - x1) * _i29 / _n) / Math.max(1, chord), chord)]);
+        for (var _i31 = 0; _i31 <= _n; _i31++) arc.push([clamp(x1 + (x2 - x1) * _i31 / _n, 0, chord), ribY(prof, up, (x1 + (x2 - x1) * _i31 / _n) / Math.max(1, chord), chord)]);
         out.push({
           kind: "poly",
           yc,
@@ -6515,9 +6791,9 @@ function ribCutoutsMM(endKey, prof, chord) {
       }
     }
   } catch (err) {
-    _iterator25.e(err);
+    _iterator26.e(err);
   } finally {
-    _iterator25.f();
+    _iterator26.f();
   }
   return out;
 }
@@ -6593,8 +6869,8 @@ function ribSheetCanvas(e) {
   ctx.lineTo(X(0), Y(0) - 2.2 * P);
   ctx.moveTo(X(e.chord), Y(0));
   ctx.lineTo(X(e.chord), Y(0) - 2.2 * P);
-  for (var _i30 = 0, _arr1 = [0.25, 0.5, 0.75]; _i30 < _arr1.length; _i30++) {
-    var fr = _arr1[_i30];
+  for (var _i32 = 0, _arr11 = [0.25, 0.5, 0.75]; _i32 < _arr11.length; _i32++) {
+    var fr = _arr11[_i32];
     var xx = X(e.chord * fr);
     ctx.moveTo(xx, Y(0) - 2 * P);
     ctx.lineTo(xx, Y(0) + 2 * P);
@@ -6605,27 +6881,27 @@ function ribSheetCanvas(e) {
   ctx.font = Math.round(2.6 * P) + 'px "Segoe UI", Arial';
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
-  for (var _i31 = 0, _arr10 = [0.25, 0.5, 0.75]; _i31 < _arr10.length; _i31++) {
-    var _fr = _arr10[_i31];
+  for (var _i33 = 0, _arr12 = [0.25, 0.5, 0.75]; _i33 < _arr12.length; _i33++) {
+    var _fr = _arr12[_i33];
     ctx.fillText(String(_fr * 100), X(e.chord * _fr), Y(0) + 5.2 * P);
   }
 
   // вырезы лонжерона: штрихом, без подписей и размеров
   ctx.strokeStyle = "#111";
   ctx.lineWidth = 0.5 * P;
-  var _iterator26 = _createForOfIteratorHelper(cut),
-    _step26;
+  var _iterator27 = _createForOfIteratorHelper(cut),
+    _step27;
   try {
-    for (_iterator26.s(); !(_step26 = _iterator26.n()).done;) {
-      var c = _step26.value;
+    for (_iterator27.s(); !(_step27 = _iterator27.n()).done;) {
+      var c = _step27.value;
       dashPath(ctx, c.pts.map(p => [X(p[0]), Y(p[1])]), 2.6 * P, 1.4 * P, true);
     }
 
     // линейка 100 мм с шагом 10 — проверка масштаба после печати
   } catch (err) {
-    _iterator26.e(err);
+    _iterator27.e(err);
   } finally {
-    _iterator26.f();
+    _iterator27.f();
   }
   var barY = (topZone + ribH + 14) * P,
     barX = X(0),
@@ -6695,8 +6971,8 @@ function ribA4Pages(sheet, e) {
     }
   }
   var pages = [];
-  for (var _i32 = 0; _i32 < M; _i32++) {
-    var xS = _i32 * (printW - PDF_JOINT);
+  for (var _i34 = 0; _i34 < M; _i34++) {
+    var xS = _i34 * (printW - PDF_JOINT);
     var cv = document.createElement("canvas");
     cv.width = pW * P;
     cv.height = pH * P;
@@ -6711,7 +6987,7 @@ function ribA4Pages(sheet, e) {
     pc.textAlign = "left";
     pc.textBaseline = "alphabetic";
     pc.font = "600 " + Math.round(3.6 * P) + 'px "Segoe UI", Arial';
-    pc.fillText(e.title + " · " + (e.prof && e.prof.name || "—") + " · хорда " + Math.round(e.chord) + " мм" + (M > 1 ? " · лист " + (_i32 + 1) + " из " + M : ""), PDF_PAD * P, 10 * P);
+    pc.fillText(e.title + " · " + (e.prof && e.prof.name || "—") + " · хорда " + Math.round(e.chord) + " мм" + (M > 1 ? " · лист " + (_i34 + 1) + " из " + M : ""), PDF_PAD * P, 10 * P);
     // строка внизу листа
     pc.fillStyle = "#444";
     pc.font = Math.round(2.6 * P) + 'px "Segoe UI", Arial';
@@ -6781,8 +7057,8 @@ function pdfFromPages(pages) {
 /* кнопка: PDF из листов A4, имя файла — по имени нервюры (профиля) */
 function ribPdf() {
   readCutForm();
-  var rp = S.profiles[CFG.root.idx] || S.profiles[0];
-  var tp = S.profiles[CFG.tip.idx] || S.profiles[0];
+  var rp = endProfile("root");
+  var tp = endProfile("tip");
   if (!rp || !tp) return null;
   var ends = [{
     key: "root",
@@ -6796,8 +7072,8 @@ function ribPdf() {
     title: "КОНЦЕВАЯ НЕРВЮРА"
   }];
   var pages = [];
-  for (var _i33 = 0, _ends = ends; _i33 < _ends.length; _i33++) {
-    var e = _ends[_i33];
+  for (var _i35 = 0, _ends = ends; _i35 < _ends.length; _i35++) {
+    var e = _ends[_i35];
     ribA4Pages(ribSheetCanvas(e), e).forEach(p => pages.push(p));
   }
   var nm = ((rp.name === tp.name ? rp.name : rp.name + " - " + tp.name) || "профиль").replace(/[\\/:*?"<>|]+/g, "-").trim();
@@ -7138,23 +7414,23 @@ function init() {
   })();
   $("#pSeed").onclick = () => {
     var n = 0;
-    var _iterator27 = _createForOfIteratorHelper(seedProfiles()),
-      _step27;
+    var _iterator28 = _createForOfIteratorHelper(seedProfiles()),
+      _step28;
     try {
       var _loop1 = function _loop1() {
-        var sp = _step27.value;
+        var sp = _step28.value;
         if (!S.profiles.some(p => p.name === sp.name)) {
           S.profiles.push(sp);
           n++;
         }
       };
-      for (_iterator27.s(); !(_step27 = _iterator27.n()).done;) {
+      for (_iterator28.s(); !(_step28 = _iterator28.n()).done;) {
         _loop1();
       }
     } catch (err) {
-      _iterator27.e(err);
+      _iterator28.e(err);
     } finally {
-      _iterator27.f();
+      _iterator28.f();
     }
     saveProfiles();
     renderProfileList();
@@ -7330,6 +7606,14 @@ function init() {
       st = JSON.stringify(CFG.tip);
     CFG.root = JSON.parse(st);
     CFG.tip = JSON.parse(sr);
+    // Контуры DXF едут вместе со своими торцами: зеркалим обе башни и их файлы
+    var dr = DXF.root,
+      dt = DXF.tip;
+    DXF.root = dt;
+    DXF.tip = dr;
+    var fr = DXF_FILE.root;
+    DXF_FILE.root = DXF_FILE.tip;
+    DXF_FILE.tip = fr;
     if (CFG.spar && CFG.spar.root && CFG.spar.tip) {
       var _pr = JSON.stringify(CFG.spar.root),
         pt = JSON.stringify(CFG.spar.tip);
@@ -7343,7 +7627,10 @@ function init() {
       }
     }
     saveCfg();
+    saveDxf();
     syncFormFromCfg();
+    fillCutSelects();
+    renderDxf();
     refreshCut();
     toast("Профили поменялись местами: корень ↔ конец");
   };
@@ -7399,6 +7686,7 @@ function init() {
           msg = "Проект открыт";
           if (r.added) msg += " · профилей добавлено в базу: " + r.added;
           if (r.chordFixed) msg += " · хорда профиля возвращена из проекта";
+          if (r.dxfRestored) msg += " · контуров вернулось в «Пенорезку DXF»: " + r.dxfRestored;
           toast(msg);
           _context7.n = 4;
           break;
@@ -7480,36 +7768,42 @@ function init() {
   };
   $("#cShowWire").onchange = renderCut;
 
-  // пенорезка DXF: загрузка контуров по башням и синхронизация профилей
+  // пенорезка DXF: загрузка контуров по башням и синхронизация
   if ($("#dxfRootBtn")) $("#dxfRootBtn").onclick = () => $("#dxfRootFile").click();
   if ($("#dxfTipBtn")) $("#dxfTipBtn").onclick = () => $("#dxfTipFile").click();
   if ($("#dxfRootFile")) $("#dxfRootFile").onchange = () => dxfLoadTo("root");
   if ($("#dxfTipFile")) $("#dxfTipFile").onchange = () => dxfLoadTo("tip");
-  ["#dxfRootProf", "#dxfTipProf"].forEach(id => {
-    var el = $(id);
+  if ($("#dxfRootClr")) $("#dxfRootClr").onclick = () => dxfClear("root");
+  if ($("#dxfTipClr")) $("#dxfTipClr").onclick = () => dxfClear("tip");
+  [["#dxfRootCh", "root"], ["#dxfTipCh", "tip"]].forEach(pair => {
+    var el = $(pair[0]);
     if (!el) return;
-    el.addEventListener("change", () => dxfPick(id === "#dxfRootProf" ? "root" : "tip", +el.value || 0));
+    el.addEventListener("change", () => dxfSetChord(pair[1], el.value));
   });
   if ($("#dxfSync")) $("#dxfSync").onchange = () => {
     if (dxfSyncOn()) {
-      var i = dxfIdx("root");
-      CFG.tip.idx = i;
-      CFG.tip.name = (S.profiles[i] || {}).name || "";
+      var src = DXF.root;
+      if (!src) {
+        dxfChanged("Синхронизация включена — загрузи контур в левую башню, он повторится на правой");
+        return;
+      }
+      DXF.tip = {
+        name: src.name,
+        pts: src.pts,
+        chord: src.chord,
+        file: src.file,
+        auto: src.auto,
+        prevChord: +DXF.tip && +DXF.tip.prevChord > 0 ? +DXF.tip.prevChord : Math.max(1, +CFG.tip.chord || 0)
+      };
       DXF_FILE.tip = DXF_FILE.root || "";
-      dxfChanged("Синхронизация включена — обе башни на «" + ((S.profiles[i] || {}).name || "") + "»");
+      dxfChanged("Синхронизация включена — обе башни на «" + src.name + "»");
     } else {
       dxfChanged("Синхронизация выключена — башни настраиваются отдельно");
     }
   };
   if ($("#dxfCopyTip")) $("#dxfCopyTip").onclick = () => dxfCopy("root", "tip");
   if ($("#dxfCopyRoot")) $("#dxfCopyRoot").onclick = () => dxfCopy("tip", "root");
-  if ($("#dxfGen")) $("#dxfGen").onclick = () => {
-    var g = $("#cGen");
-    if (g) g.click();
-    renderDxf();
-  };
   if ($("#dxfToCut")) $("#dxfToCut").onclick = () => switchTab("cut");
-  if ($("#dxfToEditor")) $("#dxfToEditor").onclick = () => openInEditor(dxfIdx(DXF_LAST));
 
   // плеер
   $("#simPlay").onclick = playPause;
@@ -7517,32 +7811,33 @@ function init() {
   $("#simSpeed").onchange = () => {
     SIM.speed = Math.max(0.05, +$("#simSpeed").value || 1);
   };
-  // «следить за резом» есть только в 3D; в «Торцах 2D» галочка убирается целиком
+  // вид симуляции: 3D / «Торцы 2D» / «Синхронизация» (оба торца наложены, видна проволока)
   var vFollowSaved = true;
-  $("#v3d").onclick = () => {
-    VDRAW = "3d";
-    $("#v3d").classList.add("act");
-    $("#v2d").classList.remove("act");
-    $("#vFollowLbl").style.display = "flex";
-    $("#vFollow").checked = vFollowSaved;
+  var setVDRAW = mode => {
+    if (mode === "2d" && VDRAW !== "2d") {
+      vFollowSaved = $("#vFollow").checked;
+      $("#vFollow").checked = false;
+    }
+    if (mode === "3d" && VDRAW === "2d") {
+      $("#vFollow").checked = vFollowSaved;
+    }
+    VDRAW = mode;
+    $("#v3d").classList.toggle("act", mode === "3d");
+    $("#v2d").classList.toggle("act", mode === "2d");
+    var vs = $("#vSync");
+    if (vs) vs.classList.toggle("act", mode === "sync");
+    $("#vFollowLbl").style.display = mode === "3d" ? "flex" : "none";
     setZoomLbl();
     renderCut();
   };
-  $("#v2d").onclick = () => {
-    VDRAW = "2d";
-    $("#v2d").classList.add("act");
-    $("#v3d").classList.remove("act");
-    vFollowSaved = $("#vFollow").checked;
-    $("#vFollow").checked = false;
-    $("#vFollowLbl").style.display = "none";
-    setZoomLbl();
-    renderCut();
-  };
+  $("#v3d").onclick = () => setVDRAW("3d");
+  $("#v2d").onclick = () => setVDRAW("2d");
+  if ($("#vSync")) $("#vSync").onclick = () => setVDRAW("sync");
   document.addEventListener("keydown", e => {
     if (e.code !== "Space") return;
     var tag = (document.activeElement || {}).tagName;
     if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-    if (!$("#tab-cut").classList.contains("act")) return;
+    if (!$("#tab-cut").classList.contains("act") && !$("#tab-cutdxf").classList.contains("act")) return;
     e.preventDefault();
     playPause();
   });
@@ -7697,6 +7992,11 @@ function init() {
         px: 0,
         py: 0
       };
+      VSYNC = {
+        zoom: 1,
+        px: 0,
+        py: 0
+      }; // вид «Синхронизация»
       setZoomLbl();
       renderCut();
     };
@@ -7765,6 +8065,18 @@ function init() {
         }
         vv.px = clamp(vv.px, -rect.width * 2, rect.width * 2);
         vv.py = clamp(vv.py, -rect.height * 2, rect.height * 2);
+      } else if (VDRAW === "sync") {
+        // вид «Синхронизация»: зум вокруг курсора, чтобы точка под мышью осталась на месте
+        var _z = Math.max(0.2, +VSYNC.zoom || 1),
+          _z2 = clamp(_z * factor, 0.2, 24);
+        if (Math.abs(_z2 - _z) < 1e-6) return;
+        if (VSYNC_M0) {
+          var u = rect.width / 2 + (mx - rect.width / 2 - VSYNC.px) / _z;
+          var v = rect.height / 2 + (my - rect.height / 2 - VSYNC.py) / _z;
+          VSYNC.px = mx - rect.width / 2 - (u - rect.width / 2) * _z2;
+          VSYNC.py = my - rect.height / 2 - (v - rect.height / 2) * _z2;
+        }
+        VSYNC.zoom = _z2;
       } else {
         VIEW.zoom = clamp(VIEW.zoom * factor, 0.2, 14);
       }
@@ -7806,13 +8118,18 @@ function init() {
         if (VDRAW === "2d") {
           freezeFollow(e.clientX);
           grab(e, "pan2d");
-        } else grab(e, "pan3d");
+        } else if (VDRAW === "sync") grab(e, "pansync");else grab(e, "pan3d");
         e.preventDefault();
         return;
       }
       if (VDRAW === "2d" && e.button === 0) {
         freezeFollow(e.clientX);
         grab(e, "pan2d"); // в 2D обычное перетаскивание тоже сдвигает
+        return;
+      }
+      if (VDRAW === "sync" && e.button === 0) {
+        // в «Синхронизации» тянется вид, а не станок
+        grab(e, "pansync");
         return;
       }
       grab(e, "rot");
@@ -7831,6 +8148,9 @@ function init() {
       } else if (drag === "pan3d") {
         VIEW.px = clamp(VIEW.px + dx, -cv.clientWidth * 2, cv.clientWidth * 2);
         VIEW.py = clamp(VIEW.py + dy, -cv.clientHeight * 2, cv.clientHeight * 2);
+      } else if (drag === "pansync") {
+        VSYNC.px = clamp(VSYNC.px + dx, -cv.clientWidth * 2, cv.clientWidth * 2);
+        VSYNC.py = clamp(VSYNC.py + dy, -cv.clientHeight * 2, cv.clientHeight * 2);
       } else {
         // сдвигается только тот торец, с которого начали тянуть
         var vv = v2(dragPanel);
@@ -7879,8 +8199,12 @@ function init() {
       renderCut();
       renderSparPreview();
     }
-    if (t.id === "tab-cutdxf") renderDxf();
+    if (t.id === "tab-cutdxf") {
+      renderCut();
+      renderDxf();
+    }
   });
+  loadDxf(); // контуры DXF из прошлого раза — живут вне базы профилей
   syncFormFromCfg();
   SIM.speed = +$("#simSpeed").value || 1;
   renderProfileList();
@@ -7889,10 +8213,13 @@ function init() {
   setBaseInfo();
   restoreBaseHandle();
   refreshCut();
-  $("#cGcode").value = buildGcode();
+  var code0 = buildGcode();
+  $("#cGcode").value = code0;
+  if (LAST) $("#cGcodeInfo").textContent = LAST.ops.length + " кадров · " + code0.split("\n").length + " строк · " + (new Blob([code0]).size / 1024).toFixed(1) + " КБ";
   simFromGcode();
   renderCut();
   updateScrub();
+  renderDxf();
 }
 function fromCode() {
   var raw = ($("#gCode").value || "").replace(/\D/g, "");
@@ -7907,21 +8234,21 @@ function fromCode() {
   $("#gMake").click();
 }
 function importFiles(files) {
-  var ok, bad, list, _iterator28, _step28, f, txt, base, p, raw, pts, ch, _raw, _pts, _ch, q, _t16, _t17;
+  var ok, bad, list, _iterator29, _step29, f, txt, base, p, raw, pts, ch, _raw, _pts, _ch, q, _t16, _t17;
   return _regeneratorAsync(function (_context1) {
     while (1) switch (_context1.p = _context1.n) {
       case 0:
         ok = 0, bad = 0;
         list = Array.from(files).filter(f => /\.(dat|txt|csv|dxf|step|stp)$/i.test(f.name));
-        _iterator28 = _createForOfIteratorHelper(list);
+        _iterator29 = _createForOfIteratorHelper(list);
         _context1.p = 1;
-        _iterator28.s();
+        _iterator29.s();
       case 2:
-        if ((_step28 = _iterator28.n()).done) {
+        if ((_step29 = _iterator29.n()).done) {
           _context1.n = 7;
           break;
         }
-        f = _step28.value;
+        f = _step29.value;
         _context1.p = 3;
         _context1.n = 4;
         return _awaitAsyncGenerator(_blobText(f));
@@ -7979,10 +8306,10 @@ function importFiles(files) {
       case 8:
         _context1.p = 8;
         _t17 = _context1.v;
-        _iterator28.e(_t17);
+        _iterator29.e(_t17);
       case 9:
         _context1.p = 9;
-        _iterator28.f();
+        _iterator29.f();
         return _context1.f(9);
       case 10:
         renderProfileList();
