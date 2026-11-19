@@ -188,7 +188,15 @@ powershell -ExecutionPolicy Bypass -File Разработка\инструмен
 
 Репозиторий: `https://github.com/permyakov344-png/AirfoilStudio` (приватный).
 
-Двойной щелчок по `Разработка\инструменты\синхронизация-с-github.bat` — и всё:
+**Автоматически.** В OpenCode достаточно написать задачу обычными словами: после
+изменений агент сам делает `commit` → `pull --rebase` → `push`. Отдельно просить
+«сохрани» не нужно.
+
+**Раз в неделю.** Задача Windows `AirfoilStudio weekly backup` — понедельник
+12:00, даже если OpenCode закрыт. Лог: `..\AirfoilStudio_backups\weekly-backup.log`.
+
+**Вручную.** Двойной щелчок по `tools\sync-now.cmd` (или по старому
+`Разработка\инструменты\синхронизация-с-github.bat`):
 
 1. сохраняет изменения (коммит с датой), если они есть;
 2. забирает изменения с GitHub (`git pull --rebase`);
