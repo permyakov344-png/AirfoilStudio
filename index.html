@@ -857,8 +857,11 @@ table.pts tr:hover td{background:#151d29}
         полилиний и дуг, и программа собирает их в одну цепочку, а если отверстие соединено
         с обводом прорезью, то обвод → прорезь → отверстие → обратно идёт одним маршрутом.
         Внутренние рамки и штампы, не связанные с деталью, в рез не попадают.</p>
-        <p><b>Вход в контур.</b> Обе башни встают на середину плоского торца детали (там, где
-        контур выходит на <b>x = 1</b>) и входят в рез <b>по прямой</b>, горизонтально со своего торца.
+        <p><b>Вход в контур.</b> Старт реза у обеих башен — точка, где прорезь выходит
+        на обвод: оттуда контур идёт в отверстие, обходит его и возвращается к прорези,
+        дальше идёт остаток обвода. Обе башни проходят отверстие и остаток обвода
+        с одинаковым числом кадров, поэтому прорезь и отверстие режутся одновременно,
+        даже если один контур обойдён по часовой стрелке, а другой против.
         Перешейки не срезаются, контур замыкается последним шагом в ту же точку.</p>
         <p><b>Синхронизация.</b> Галка «держать башни на одном контуре»: что загрузил в одну башню,
         встаёт и в другую — рез идёт прямой призмой. Выключено — крыло с разными нервюрами, а кнопки
@@ -2991,67 +2994,172 @@ function polyLength(pts){
   return s;
 }
 
-/* То же, что buildEnd, но контур берётся из CAD целиком: замкнутый обвод со всеми
-   внутренними контурами и прорезями к ним. Точки ставятся равномерно по длине
-   контура, а старт — середина плоского торца при x=1: там обе башни стоят на одном
-   Y, поэтому вход в рез по прямой с любой из башен (и с левой, и с правой). */
-function buildEndCad(cfg, prof, N){
-  let p0 = ((prof && prof.pts) || []).filter(q => Array.isArray(q) && isFinite(q[0]) && isFinite(q[1]));
-  if(p0.length > 3 && Math.hypot(p0[0][0]-p0[p0.length-1][0], p0[0][1]-p0[p0.length-1][1]) < 1e-9) p0.pop();
+/* ---- разметка контура из CAD для синхронного реза ----
+   У корневой и концевой детали контур может быть обойдён в разные стороны
+   (в файле один КЦВ, другой по часовой). Если обе башни пустить «по длине
+   контура», они поедут в противоположных направлениях: одна по обводу, вторая
+   уже по отверстию — проволока растягивается, синхронизации нет.
+   Поэтому контур приводится к одному направлению (КЦВ), находится прорезь
+   «обвод → отверстие» и обход делится на две фазы одинакового смысла у обеих
+   башен:
+     • отверстие (от входа через прорезь и обратно к ней),
+     • остаток обвода до входа.
+   Отверстие — та из двух цепочек между концами прорези, у которой меньше
+   площадь: обвод всегда крупнее в разы, поэтому выбор устойчив.
+   Начало контура ставится в точку входа в отверстие, чтобы старт реза у обеих
+   башен был одинаковым. Дальше обе башни идут по фазам с одинаковым числом
+   точек, поэтому в прорезь и в отверстие они входят на одном кадре. */
+function cadPlan(prof){
+  let p = ((prof && prof.pts) || []).filter(q => Array.isArray(q) && isFinite(q[0]) && isFinite(q[1]));
+  const cl = [];
+  for(const q of p)
+    if(!cl.length || Math.hypot(q[0]-cl[cl.length-1][0], q[1]-cl[cl.length-1][1]) > 1e-9) cl.push(q);
+  if(cl.length > 3 && Math.hypot(cl[0][0]-cl[cl.length-1][0], cl[0][1]-cl[cl.length-1][1]) <= 1e-9) cl.pop();
+  if(cl.length < 3) return null;
+  // одно направление обхода у обеих башен
+  const p0 = signedArea(cl) < 0 ? cl.slice().reverse() : cl;
   const n = p0.length;
-  if(n < 3) return null;
-  const seg = [];
+
+  const seg = [], arc = [0];
   let per = 0;
   for(let i = 0; i < n; i++){
     const a = p0[i], b = p0[(i+1) % n];
     const l = Math.hypot(b[0]-a[0], b[1]-a[1]);
-    seg.push(l); per += l;
+    seg.push(l); per += l; arc.push(per);
   }
   if(!(per > 1e-9)) return null;
 
-  // старт — середина самого длинного участка на торце x=1: там плоская кромка,
-  // значит вход и выход лягут на неё, без диагонали через торец
-  const arc = [0];
-  for(let i = 0; i < n; i++) arc.push(arc[i] + seg[i]);
+  // вход — середина самого длинного плоского участка на торце x=1
   const isFace = i => Math.abs(p0[((i % n) + n) % n][0] - 1) <= 1e-6;
-  let start = -1, bestRun = -1;
+  let entry = -1, bestRun = -1;
   for(let i = 0; i < n; i++){
-    if(!isFace(i) || isFace(i - 1)) continue;      // только начало участка
-    let guard = 0;
-    while(guard < n && isFace(i + guard)) guard++;
-    if(!guard) continue;
-    // длина участка по дуге: от первой точки торца до последней, дальше уже обвод
-    const run = arc[i + guard - 1] - arc[i];
-    if(run > bestRun){ bestRun = run; start = arc[i] + run / 2; }
+    if(!isFace(i) || isFace(i-1)) continue;         // только начало участка
+    let g = 0;
+    while(g < n && isFace(i + g)) g++;
+    if(!g) continue;
+    const run = arc[i + g - 1] - arc[i];
+    if(run > bestRun){ bestRun = run; entry = arc[i] + run/2; }
   }
-  if(start < 0){                                    // торца x=1 нет — с самой правой точки
+  if(entry < 0){                                    // торца x=1 нет — с самой правой точки
     let mi = 0;
     for(let i = 1; i < n; i++) if(p0[i][0] > p0[mi][0]) mi = i;
-    start = arc[mi];
+    entry = arc[mi];
   }
 
-  // равномерная развёртка по длине: N точек на весь периметр, замыкание —
-  // короткий отрезок от последней точки к старту (он же и вход/выход проволоки)
-  const out = [];
-  const stepLen = per / Math.max(1, N);
+  // прорезь: две несоседние точки ближе всех, но обе части контура заметные —
+  // иначе это не прорезь, а тонкая кромка. Заодно зазор должен быть в разы
+  // меньше габарита: иначе «ближайшей парой» окажутся две точки плоского торца.
+  const tot = Math.abs(signedArea(p0));
+  let dgX0 = Infinity, dgX1 = -Infinity, dgY0 = Infinity, dgY1 = -Infinity;
+  for(const q of p0){
+    if(q[0] < dgX0) dgX0 = q[0];
+    if(q[0] > dgX1) dgX1 = q[0];
+    if(q[1] < dgY0) dgY0 = q[1];
+    if(q[1] > dgY1) dgY1 = q[1];
+  }
+  const dg = Math.hypot(dgX1 - dgX0, dgY1 - dgY0) || 1;
+  let na = -1, nb = -1, nd = Infinity;
+  for(let i = 0; i < n; i++){
+    for(let j = i + 3; j < n; j++){
+      if(n - 1 - (j - i) < 3) continue;
+      const d = Math.hypot(p0[i][0]-p0[j][0], p0[i][1]-p0[j][1]);
+      if(d > dg * 0.02 || d >= nd) continue;        // прорезь всегда узкая
+      const a1 = Math.abs(signedArea(p0.slice(i, j+1)));
+      const a2 = Math.abs(tot - a1);
+      if(a1 < tot*0.03 || a2 < tot*0.03) continue;
+      nd = d; na = i; nb = j;
+    }
+  }
+  if(na < 0) return { pts:p0, seg, arc, per, entry, legs:null };
+
+  // Что из двух цепочек — отверстие, а что обвод: отверстие всегда меньше
+  // по площади. Обвод крупнее в разы, поэтому сравнение устойчиво.
+  let ha = na, hb = nb;
+  const aFwd = Math.abs(signedArea(p0.slice(na, nb + 1)));
+  const aBack = Math.abs(signedArea(p0.slice(nb).concat(p0.slice(0, na + 1))));
+  if(aBack < aFwd){ ha = nb; hb = na; }
+
+  // Поворот: индекс 0 — точка входа в отверстие (она же старт реза).
+  const q0 = p0.slice(ha).concat(p0.slice(0, ha));
+  const k0 = (hb - ha + n) % n;
+  return cadPlanTail(q0, k0);
+}
+
+/* Хвост плана: у повёрнутого контура свой периметр, участки — «отверстие»,
+   «остаток обвода». Две фазы у обеих башен, поэтому прорезь и отверстие
+   проходятся на одних кадрах. */
+function cadPlanTail(q0, k0){
+  const n = q0.length, seg = [], arc = [0];
+  let per = 0;
+  for(let i = 0; i < n; i++){
+    const a = q0[i], b = q0[(i+1) % n];
+    const l = Math.hypot(b[0]-a[0], b[1]-a[1]);
+    seg.push(l); per += l; arc.push(per);
+  }
+  if(!(per > 1e-9)) return null;
+  const holeLen = clamp(arc[k0], 0, per);
+  return { pts:q0, seg, arc, per, entry:0, holeAt:k0,
+           legs:[holeLen, Math.max(0, per - holeLen)] };
+}
+
+/* Сколько точек реза отдать каждому из двух участков (отверстие → остаток
+   обвода): одно и то же число у корня и конца, чтобы прорезь, отверстие и
+   выход из него резались на одних кадрах. */
+function cadShare(p1, p2, N){
+  N = Math.max(4, N | 0);
+  const L = [0, 0];
+  for(const pl of [p1, p2]){
+    if(!pl || !pl.legs) continue;
+    for(let k = 0; k < 2; k++) L[k] += pl.legs[k] / pl.per;
+  }
+  const sum = L[0] + L[1];
+  if(!(sum > 0)) return null;
+  const nmax = N - 1;                               // замыкающий шаг входа отдельным кадром
+  let a = Math.max(6, Math.round(nmax * L[0] / sum));
+  if(a > nmax - 6) a = Math.max(6, nmax - 6);
+  return [a, Math.max(6, nmax - a)];
+}
+
+/* То же, что buildEnd, но контур берётся из CAD целиком: обвод со всеми
+   внутренними контурами и прорезями. Точки ставятся по длине контура, а если
+   передан план (cadPlan) и раскладка (cadShare) — участки «обвод / отверстие /
+   остаток» проходятся в том же порядке и с тем же числом точек у обеих башен. */
+function buildEndCad(cfg, prof, N, plan, share){
+  const pl = plan || cadPlan(prof);
+  if(!pl) return null;
+  const p0 = pl.pts, n = p0.length, seg = pl.seg, per = pl.per;
   const seek = t => {
+    t = ((t % per) + per) % per;
     let k = 0, a = 0;
     while(k < n - 1 && a + seg[k] < t){ a += seg[k]; k++; }
     return [k, t - a];
   };
-  for(let q = 0; q < N; q++){
-    let t = start + q * stepLen;
-    while(t >= per) t -= per;
+  const at = t => {
     const [k, u] = seek(t);
     const a = p0[k], b = p0[(k+1) % n];
     const f = clamp(u / (seg[k] || 1), 0, 1);
-    out.push([a[0] + (b[0]-a[0])*f, a[1] + (b[1]-a[1])*f]);
+    return [a[0] + (b[0]-a[0])*f, a[1] + (b[1]-a[1])*f];
+  };
+
+  const out = [];
+  if(share && pl.legs){
+    // Две фазы: отверстие (от входа через прорезь) и остаток обвода.
+    // Внутри фазы точки стоят равномерно, число точек общее для обеих башен,
+    // поэтому прорезь, отверстие и выход из него совпадают по кадрам.
+    let t0 = pl.entry;
+    for(let k = 0; k < pl.legs.length; k++){
+      const cnt = Math.max(1, share[k] | 0), len = pl.legs[k];
+      for(let q = 0; q < cnt; q++) out.push(at(t0 + len * q / cnt));
+      t0 += len;
+    }
+  }else{
+    for(let q = 0; q < N; q++) out.push(at(pl.entry + per * q / Math.max(1, N)));
   }
 
   let c = out.map(([x,y]) => mapPt(cfg, x, y));
   const kf = cutKerf();
   if(kf > 0) c = offsetPoly(c, kf/2);
-  return { pts:c };
+  return { pts:c, plan:pl };
 }
 
 /* Полость лонжерона на торце: замкнутый контур + точка захода (сверху/снизу).
@@ -3233,8 +3341,12 @@ function computeCut(){
   }
   const M = towerMap();                 // башни (концы проволоки) могут стоять шире заготовки
 
-  const R = dxfMode ? buildEndCad(CFG.root, rp, N) : buildEnd(CFG.root, rp, N);
-  const T = dxfMode ? buildEndCad(CFG.tip,  tp, N) : buildEnd(CFG.tip,  tp, N);
+  const planR = dxfMode ? cadPlan(rp) : null;
+  const planT = dxfMode ? cadPlan(tp) : null;
+  const share = dxfMode ? cadShare(planR, planT, N) : null;
+
+  const R = dxfMode ? buildEndCad(CFG.root, rp, N, planR, share) : buildEnd(CFG.root, rp, N);
+  const T = dxfMode ? buildEndCad(CFG.tip,  tp, N, planT, share) : buildEnd(CFG.tip,  tp, N);
   if(!R || !T) return null;
 
   // габариты обоих торцов — чтобы поставить заготовку
@@ -3256,8 +3368,8 @@ function computeCut(){
 
   const teY = pts => (pts[0][1] + pts[pts.length-1][1]) / 2;
   const back = Math.max(0, +CFG.lead || 0);
-  // В «Пенорезке DXF» вход — строго по прямой: первая точка реза стоит на середине
-  // плоского торца x=1, поэтому холодная подводка идёт горизонтально с обеих башен.
+  // В «Пенорезке DXF» вход — строго по прямой: первая точка реза стоит на прорези
+  // (там, где она выходит на обвод), поэтому холодная подводка горизонтальна с обеих башен.
   const entryR = [0, dxfMode ? R.pts[0][1] : teY(R.pts)];
   const entryT = [0, dxfMode ? T.pts[0][1] : teY(T.pts)];
   const parkR = [-back, entryR[1]], parkT = [-back, entryT[1]];
@@ -3385,7 +3497,9 @@ function computeCut(){
   ops[outerIdx].note = "(continuous cut: entry at face, TE)";
   const sp = cav.slice().sort((a, b) => a.first - b.first);
   let curR = 0, curT = 0;
-  for(let si = 0; si <= sp.length; si++){
+  // В «Пенорезке DXF» обвод режется целиком отдельным циклом ниже — общий обход
+  // по точкам здесь не нужен, иначе контур проходится дважды.
+  for(let si = 0; !dxfMode && si <= sp.length; si++){
     const endR = si < sp.length ? sp[si].iInR : R.pts.length - 1;
     const endT = si < sp.length ? sp[si].iInT : T.pts.length - 1;
     walkTo(curR, endR, curT, endT);
