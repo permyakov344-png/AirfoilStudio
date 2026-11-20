@@ -408,7 +408,7 @@ table.pts tr:hover td{background:#151d29}
         <label class="fld"><b>Сдвиг Y</b><input type="number" id="cTipY" value="0"></label>
       </div>
       <label class="fld"><b>Угол установки, °</b><input type="number" id="cTipRot" value="0" step="0.5"></label>
-      <div class="hint" style="font-size:11px;line-height:1.45">Каждый «Сдвиг X» двигает <b>только свою нервюру</b> —
+      <div class="hint" id="cShiftHint" style="font-size:11px;line-height:1.45">Каждый «Сдвиг X» двигает <b>только свою нервюру</b> —
         двигать крыло целиком можно полем «от торца до ЗК». Стреловидность по ЗК = сдвиг X концевой − сдвиг X корневой:
         <b id="cSweepHint">0</b> мм. <b>0</b> — обе задние кромки на одной глубине (стреловидность только по передней кромке),
         больше нуля — концевая уходит глубже в блок. Обе нервюры всегда стоят на концах заготовки.</div>
@@ -420,8 +420,8 @@ table.pts tr:hover td{background:#151d29}
           <input type="checkbox" id="dxfSync" checked> держать башни на одном контуре
         </label>
         <div class="hint" style="font-size:11px;line-height:1.45">Включено: что загрузил в одну башню, встаёт и в другую —
-          обе нервюры одинаковые, рез идёт прямой призмой. Выключено: башни живут отдельно (крыло с переменным профилем),
-          а кнопки ниже переносят контур из одной башни в другую.</div>
+          оба контура одинаковые, рез идёт прямой призмой. Выключено: башни живут отдельно, у каждой свой контур
+          и свой размер, а кнопки ниже переносят контур из одной башни в другую.</div>
         <div class="row">
           <button id="dxfCopyTip" class="grow1" title="Взять контур левой башни и поставить его на правую">левая → правая</button>
           <button id="dxfCopyRoot" class="grow1" title="Взять контур правой башни и поставить его на левую">правая → левая</button>
@@ -597,8 +597,10 @@ table.pts tr:hover td{background:#151d29}
       </div>
       <div class="hint" id="cSimSrc">—</div>
       <div class="hint" id="vHint">Колесо мыши — зум · перетаскивание — сдвиг (в 3D — поворот, с Shift — сдвиг) ·
-        двойной щелчок — вернуть вид. В «Торцах 2D» каждая башня (левая и правая) увеличивается отдельно —
-        приближается только та, над которой стоит курсор. Сетка — 10 мм, размеры по краям — в миллиметрах.</div>
+        двойной щелчок — вернуть вид. В «Торцах 2D» профиль можно потянуть за контур влево и вправо: «Сдвиг X»
+        этого торца прилипает к сетке 10 мм (Alt — по 1 мм). Тянуть за пустое место или с Shift — сдвиг вида.
+        Каждая башня (левая и правая) увеличивается отдельно — приближается только та, над которой стоит курсор.
+        Сетка — 10 мм, размеры по краям — в миллиметрах.</div>
     </div>
 
     <div class="panel" style="width:380px">
@@ -888,9 +890,13 @@ table.pts tr:hover td{background:#151d29}
         с одинаковым числом кадров, поэтому прорезь и отверстие режутся одновременно,
         даже если один контур обойдён по часовой стрелке, а другой против.
         Перешейки не срезаются, контур замыкается последним шагом в ту же точку.</p>
+        <p><b>Ширина реза уводится в отход.</b> Внешний обвод смещается наружу, а внутренний
+        вырез — в свою сторону (в отход), поэтому проволока не заходит в материал детали.
+        Сторона не зависит от того, как контуры обойдены в файле: у обвода и у выреза она
+        считается отдельно.</p>
         <p><b>Синхронизация.</b> Галка «держать башни на одном контуре»: что загрузил в одну башню,
-        встаёт и в другую — рез идёт прямой призмой. Выключено — крыло с разными нервюрами, а кнопки
-        «левая → правая» / «правая → левая» переносят контур вручную.</p>
+        встаёт и в другую — рез идёт прямой призмой. Выключено — у каждой башни свой контур и свой
+        размер, а кнопки «левая → правая» / «правая → левая» переносят контур вручную.</p>
         <p>Оба контура видно на холсте наложенными в натуральную величину: синяя линия — левая башня,
         оранжевая — правая; совпали — правая ложится синим пунктиром ровно на левую. Сетка 10 мм,
         подписи по краям зелёные, линия y = 0 — хорда.</p>
@@ -910,7 +916,9 @@ table.pts tr:hover td{background:#151d29}
         <p>Режим <b>3D</b> показывает башни, проволоку и вырезаемую поверхность в объёме.
         Режим <b>Торцы 2D</b> — вид на каждую башню отдельно: <b>левая</b> (корневая нервюра)
         и <b>правая</b> (концевая), с текущими координатами в мм и сеткой 10 мм —
-        размер на экране совпадает с настоящим (растяжения по Y нет).</p>
+        размер на экране совпадает с настоящим (растяжения по Y нет). Профиль можно
+        <b>потянуть за контур влево или вправо</b>: «Сдвиг X» этого торца меняется и прилипает
+        к сетке 10 мм (с зажатым <b>Alt</b> — по 1 мм). За пустое место или с Shift тянется вид.</p>
         <p>Режим <b>Синхронизация</b> — вид со стороны проволоки, вдоль её оси. Когда обе башни идут
         по одинаковым контурам, проволока в этом виде — точка: башни рисуются одним маркером
         (синяя и оранжевая половина). Как только контуры расходятся — появляется линия проволоки
@@ -938,8 +946,9 @@ table.pts tr:hover td{background:#151d29}
         если через Flood/Mist или пользовательскую кнопку — поставь M8/M9 или свой M-код.</p>
         <p>Подачу подбирай по пене: тонкая проволока и большой ток режут быстрее, но дают широкий рез.
         <b>Диаметр проволоки</b> вписывай в поле «Ø проволоки» — программа строит траекторию не по контуру
-        профиля, а <b>с отступом на радиус проволоки наружу</b>, чтобы после реза деталь получилась
-        по номинальному контуру. Поле «прибавка» добавляет проплавление сверх диаметра (обычно 0).
+        профиля, а <b>с отступом на радиус проволоки в отход</b> (по обводу наружу, по внутреннему
+        вырезу в его сторону), чтобы после реза деталь получилась по номинальному контуру. Поле
+        «прибавка» добавляет проплавление сверх диаметра (обычно 0).
         Ширина реза = диаметр проволоки + прибавка; её же программа учитывает для полостей лонжерона
         (отверстие получается ровно заданного размера).</p>
         <p><b>Свой постпроцессор.</b> На вкладке «Станок» есть поля «Строки в начало» и «Строки в конец» —
@@ -3432,6 +3441,63 @@ function cadShare(p1, p2, N) {
   return [a, Math.max(6, nmax - a)];
 }
 
+/* Смещение открытой цепочки на r. dir = +1 — наружу от её площади (в отход для
+   обвода), −1 — внутрь (в отход для выреза). Концы цепочки не двигаются: они
+   общие у обвода и выреза (губы прорези), поэтому маршрут остаётся непрерывным. */
+function offsetChain(pts, r, dir) {
+  var n = pts.length,
+    out = pts.map(q => q.slice());
+  if (!(r > 0) || n < 3) return out;
+  var s = (signedArea(pts) > 0 ? 1 : -1) * (dir < 0 ? -1 : 1);
+  for (var i = 1; i < n - 1; i++) {
+    var p0 = pts[i - 1],
+      p1 = pts[i],
+      p2 = pts[i + 1];
+    var d1 = [p1[0] - p0[0], p1[1] - p0[1]];
+    var d2 = [p2[0] - p1[0], p2[1] - p1[1]];
+    var l1 = Math.hypot(d1[0], d1[1]) || 1e-9;
+    var l2 = Math.hypot(d2[0], d2[1]) || 1e-9;
+    d1 = [d1[0] / l1, d1[1] / l1];
+    d2 = [d2[0] / l2, d2[1] / l2];
+    var n1 = [d1[1] * s, -d1[0] * s];
+    var n2 = [d2[1] * s, -d2[0] * s];
+    var mx = n1[0] + n2[0],
+      my = n1[1] + n2[1];
+    var lm = Math.hypot(mx, my);
+    if (lm < 1e-7) {
+      mx = n1[0];
+      my = n1[1];
+    } else {
+      mx /= lm;
+      my /= lm;
+    }
+    var dot = mx * n1[0] + my * n1[1];
+    var k = Math.abs(dot) < 0.25 ? 4 : 1 / dot;
+    k = clamp(k, 1, 4);
+    out[i] = [p1[0] + mx * r * k, p1[1] + my * r * k];
+  }
+  return out;
+}
+
+/* Ширина реза для контура из CAD: обвод смещается наружу от детали, внутренний
+   вырез — в сторону выреза (в отход), поэтому проволока никогда не заходит
+   в материал. Сторона не зависит от того, как контур обойдён в файле: у каждой
+   цепочки знак берётся по её собственной площади. holeEnd — индекс второй губы
+   прорези (начало цепочки обвода). */
+function offsetCadPath(pts, holeEnd, r) {
+  var n = pts.length;
+  if (!(r > 0) || n < 5) return pts;
+  var k = clamp(holeEnd | 0, 2, n - 3);
+  var hole = pts.slice(0, k + 1); // от губы A вокруг выреза к губе B
+  var outer = pts.slice(k).concat([pts[0]]); // от губы B по обводу к губе A
+  var ho = offsetChain(hole, r, -1); // внутрь выреза — в отход
+  var oo = offsetChain(outer, r, +1); // наружу от детали — в отход
+  var out = pts.map(q => q.slice());
+  for (var i = 1; i < k; i++) out[i] = ho[i];
+  for (var _i11 = k + 1; _i11 < n; _i11++) out[_i11] = oo[_i11 - k];
+  return out;
+}
+
 /* То же, что buildEnd, но контур берётся из CAD целиком: обвод со всеми
    внутренними контурами и прорезями. Точки ставятся по длине контура, а если
    передан план (cadPlan) и раскладка (cadShare) — участки «обвод / отверстие /
@@ -3480,7 +3546,11 @@ function buildEndCad(cfg, prof, N, plan, share) {
   }
   var c = out.map(([x, y]) => mapPt(cfg, x, y));
   var kf = cutKerf();
-  if (kf > 0) c = offsetPoly(c, kf / 2);
+  if (kf > 0) {
+    // Прорезь есть — обвод и вырез смещаются каждый в свою сторону (см. offsetCadPath).
+    // Без прорези (share не задан) контур один, работает общий offsetPoly.
+    c = share && pl.legs ? offsetCadPath(c, Math.max(1, Math.min(c.length - 3, share[0] | 0)), kf / 2) : offsetPoly(c, kf / 2);
+  }
   return {
     pts: c,
     plan: pl
@@ -4001,8 +4071,8 @@ function computeCut() {
     b0: Infinity,
     b1: -Infinity
   };
-  for (var _i11 = 0; _i11 < ops.length; _i11++) {
-    var P = toTowers(ops[_i11].L, ops[_i11].R, M);
+  for (var _i12 = 0; _i12 < ops.length; _i12++) {
+    var P = toTowers(ops[_i12].L, ops[_i12].R, M);
     if (P[0][0] < tw.x0) tw.x0 = P[0][0];
     if (P[0][0] > tw.x1) tw.x1 = P[0][0];
     if (P[0][1] < tw.y0) tw.y0 = P[0][1];
@@ -4277,8 +4347,8 @@ function renderCut() {
   var box = [[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1], [x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1]].map(q => v(q[0], q[1], q[2]));
   var edges = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]];
   ctx.beginPath();
-  for (var _i12 = 0, _edges = edges; _i12 < _edges.length; _i12++) {
-    var _edges$_i = _slicedToArray(_edges[_i12], 2),
+  for (var _i13 = 0, _edges = edges; _i13 < _edges.length; _i13++) {
+    var _edges$_i = _slicedToArray(_edges[_i13], 2),
       i = _edges$_i[0],
       j = _edges$_i[1];
     ctx.moveTo(box[i][0], box[i][1]);
@@ -4290,8 +4360,8 @@ function renderCut() {
   ctx.strokeStyle = "rgba(130,160,200,.35)";
   ctx.lineWidth = 2;
   ctx.beginPath();
-  for (var _i13 = 0, _arr2 = [0, span]; _i13 < _arr2.length; _i13++) {
-    var x = _arr2[_i13];
+  for (var _i14 = 0, _arr2 = [0, span]; _i14 < _arr2.length; _i14++) {
+    var x = _arr2[_i14];
     var a = v(x, yBase, zLo),
       b = v(x, yBase, zHi);
     ctx.moveTo(a[0], a[1]);
@@ -4306,9 +4376,9 @@ function renderCut() {
   ctx.strokeStyle = "rgba(78,161,255,.22)";
   ctx.lineWidth = 1;
   ctx.beginPath();
-  for (var _i14 = 0; _i14 < C.R.pts.length; _i14 += stepI) {
-    var _a = v(x0, C.T.pts[_i14][1], C.T.pts[_i14][0]);
-    var _b = v(x1, C.R.pts[_i14][1], C.R.pts[_i14][0]);
+  for (var _i15 = 0; _i15 < C.R.pts.length; _i15 += stepI) {
+    var _a = v(x0, C.T.pts[_i15][1], C.T.pts[_i15][0]);
+    var _b = v(x1, C.R.pts[_i15][1], C.R.pts[_i15][0]);
     ctx.moveTo(_a[0], _a[1]);
     ctx.lineTo(_b[0], _b[1]);
   }
@@ -4316,7 +4386,7 @@ function renderCut() {
 
   // торцы заготовки: контур и пройденная часть (нервюры живут на блоке, не на башнях)
   var _loop5 = function _loop5() {
-    var _arr3$_i = _slicedToArray(_arr3[_i15], 3),
+    var _arr3$_i = _slicedToArray(_arr3[_i16], 3),
       side = _arr3$_i[0],
       pts = _arr3$_i[1],
       col = _arr3$_i[2];
@@ -4326,9 +4396,9 @@ function renderCut() {
     ctx.globalAlpha = .3;
     var sm = cutOutline(pts);
     ctx.beginPath();
-    for (var _i16 = 0; _i16 < sm.length; _i16++) {
-      var q = v(xSide, sm[_i16][1], sm[_i16][0]);
-      if (_i16 === 0) ctx.moveTo(q[0], q[1]);else ctx.lineTo(q[0], q[1]);
+    for (var _i17 = 0; _i17 < sm.length; _i17++) {
+      var q = v(xSide, sm[_i17][1], sm[_i17][0]);
+      if (_i17 === 0) ctx.moveTo(q[0], q[1]);else ctx.lineTo(q[0], q[1]);
     }
     ctx.closePath();
     ctx.stroke();
@@ -4347,8 +4417,8 @@ function renderCut() {
         ctx.stroke();
       };
       ctx.lineWidth = 2.2;
-      for (var _i17 = 1; _i17 <= st.i && _i17 < SIM.pts.length; _i17++) {
-        drawSeg(side ? SIM.pts[_i17 - 1].L : SIM.pts[_i17 - 1].R, side ? SIM.pts[_i17].L : SIM.pts[_i17].R, SIM.pts[_i17].rapid);
+      for (var _i18 = 1; _i18 <= st.i && _i18 < SIM.pts.length; _i18++) {
+        drawSeg(side ? SIM.pts[_i18 - 1].L : SIM.pts[_i18 - 1].R, side ? SIM.pts[_i18].L : SIM.pts[_i18].R, SIM.pts[_i18].rapid);
       }
       if (st.f > 1e-6 && SIM.pts[st.i]) {
         drawSeg(side ? SIM.pts[st.i].L : SIM.pts[st.i].R, side ? st.L : st.R, st.rapid);
@@ -4356,7 +4426,7 @@ function renderCut() {
       ctx.setLineDash([]);
     }
   };
-  for (var _i15 = 0, _arr3 = [[0, C.T.pts, "#4ea1ff"], [1, C.R.pts, "#38d39f"]]; _i15 < _arr3.length; _i15++) {
+  for (var _i16 = 0, _arr3 = [[0, C.T.pts, "#4ea1ff"], [1, C.R.pts, "#38d39f"]]; _i16 < _arr3.length; _i16++) {
     _loop5();
   }
 
@@ -4367,8 +4437,8 @@ function renderCut() {
     try {
       for (_iterator13.s(); !(_step13 = _iterator13.n()).done;) {
         var cv = _step13.value;
-        for (var _i18 = 0, _arr4 = [[0, cv.sT.pts], [1, cv.sR.pts]]; _i18 < _arr4.length; _i18++) {
-          var _arr4$_i = _slicedToArray(_arr4[_i18], 2),
+        for (var _i19 = 0, _arr4 = [[0, cv.sT.pts], [1, cv.sR.pts]]; _i19 < _arr4.length; _i19++) {
+          var _arr4$_i = _slicedToArray(_arr4[_i19], 2),
             side = _arr4$_i[0],
             pts = _arr4$_i[1];
           var xSide = side ? x1 : x0;
@@ -4376,9 +4446,9 @@ function renderCut() {
           ctx.lineWidth = 1.6;
           ctx.setLineDash([5, 4]);
           ctx.beginPath();
-          for (var _i19 = 0; _i19 < pts.length; _i19++) {
-            var q = v(xSide, pts[_i19][1], pts[_i19][0]);
-            if (_i19) ctx.lineTo(q[0], q[1]);else ctx.moveTo(q[0], q[1]);
+          for (var _i20 = 0; _i20 < pts.length; _i20++) {
+            var q = v(xSide, pts[_i20][1], pts[_i20][0]);
+            if (_i20) ctx.lineTo(q[0], q[1]);else ctx.moveTo(q[0], q[1]);
           }
           if (!cv.open) ctx.closePath(); // у открытого паза грань на обводе не замыкаем
           ctx.stroke();
@@ -4390,9 +4460,9 @@ function renderCut() {
         var pa = cv.sT.pts,
           pb = cv.sR.pts; // слева корневая (x1), справа концевая (x0)
         var stp = Math.max(1, Math.floor(pa.length / 12));
-        for (var _i20 = 0; _i20 < pa.length; _i20 += stp) {
-          var p1 = v(x0, pa[_i20][1], pa[_i20][0]),
-            p2 = v(x1, pb[_i20][1], pb[_i20][0]);
+        for (var _i21 = 0; _i21 < pa.length; _i21 += stp) {
+          var p1 = v(x0, pa[_i21][1], pa[_i21][0]),
+            p2 = v(x1, pb[_i21][1], pb[_i21][0]);
           ctx.moveTo(p1[0], p1[1]);
           ctx.lineTo(p2[0], p2[1]);
         }
@@ -4410,8 +4480,8 @@ function renderCut() {
   // линии «корень → конец» за торцы заготовки (экстраполяция), а не сам профиль
   if (st) {
     var _P = toTowers(st.L, st.R);
-    for (var _i21 = 0, _arr5 = [[0, _P[0], "#8ec6ff"], [1, _P[1], "#7ee0b6"]]; _i21 < _arr5.length; _i21++) {
-      var _arr5$_i = _slicedToArray(_arr5[_i21], 3),
+    for (var _i22 = 0, _arr5 = [[0, _P[0], "#8ec6ff"], [1, _P[1], "#7ee0b6"]]; _i22 < _arr5.length; _i22++) {
+      var _arr5$_i = _slicedToArray(_arr5[_i22], 3),
         _side = _arr5$_i[0],
         cur = _arr5$_i[1],
         col = _arr5$_i[2];
@@ -4513,6 +4583,63 @@ function cut2dFrame(w, h, B) {
     bcx: (xmn + xmx) / 2,
     bcy: (ymn + ymx) / 2
   };
+}
+
+/* Проекция торца в «Торцах 2D»: одна и та же для отрисовки, зума и перетаскивания
+   профиля. side — "L" (левая башня) или "R" (правая). */
+function cut2dMap(side, w, h, st) {
+  var F = cut2dFrame(w, h, LAST.block);
+  var vv = side === "L" ? VIEW2.L : VIEW2.R;
+  var s = F.s0 * vv.zoom;
+  var follow = !!($("#vFollow") || {}).checked;
+  var cur = st ? side === "L" ? st.L : st.R : null;
+  var on = follow && cur && vv.zoom > 1.02;
+  var ox = on ? -(cur[0] - F.bcx) * s : vv.px;
+  var oy = on ? (cur[1] - F.bcy) * s * F.yk : vv.py;
+  var cx = (side === "L" ? 0.5 : 1.5) * w / 2;
+  return {
+    F,
+    s,
+    cx,
+    X: x => cx + ox + (x - F.bcx) * s,
+    Y: y => h / 2 + oy - (y - F.bcy) * s * F.yk
+  };
+}
+
+/* Попадание курсора в контур торца (для перетаскивания профиля влево/вправо). */
+function cut2dHit(side, w, h, mx, my, st, tol) {
+  if (!LAST) return false;
+  var pts = side === "L" ? LAST.R.pts : LAST.T.pts;
+  if (!pts || pts.length < 3) return false;
+  var pf = cut2dMap(side, w, h, st);
+  var t = Math.max(4, +tol || 10);
+  var bx0 = Infinity,
+    bx1 = -Infinity,
+    by0 = Infinity,
+    by1 = -Infinity;
+  var scr = pts.map(q => {
+    var x = pf.X(q[0]),
+      y = pf.Y(q[1]);
+    if (x < bx0) bx0 = x;
+    if (x > bx1) bx1 = x;
+    if (y < by0) by0 = y;
+    if (y > by1) by1 = y;
+    return [x, y];
+  });
+  if (mx < bx0 - t || mx > bx1 + t || my < by0 - t || my > by1 + t) return false;
+  var seg = (ax, ay, bx, by) => {
+    var dx = bx - ax,
+      dy = by - ay;
+    var l2 = dx * dx + dy * dy || 1e-9;
+    var u = clamp(((mx - ax) * dx + (my - ay) * dy) / l2, 0, 1);
+    return Math.hypot(mx - (ax + dx * u), my - (ay + dy * u));
+  };
+  for (var i = 0; i < scr.length; i++) {
+    var a = scr[i],
+      b = scr[(i + 1) % scr.length];
+    if (seg(a[0], a[1], b[0], b[1]) <= t) return true;
+  }
+  return false;
 }
 
 /* --- 2D вид торцов --- */
@@ -4673,7 +4800,7 @@ function renderCutSync(ctx, w, h) {
   ctx.fillStyle = same ? "#4ea1ff" : "#ffb347";
   ctx.fillText("ПРАВАЯ башня (A,B) — «" + (tp ? tp.name : "—") + "»", 8, 22);
   ctx.fillStyle = "#ffd479";
-  ctx.fillText(same ? "контуры совпадают — прямая призма" : "контуры разные — крыло с переменным профилем", 8, 38);
+  ctx.fillText(same ? "контуры совпадают — прямая призма" : CUT_SRC === "dxf" ? "контуры разные — рез по двум разным контурам" : "контуры разные — крыло с переменным профилем", 8, 38);
   var pr = SIM.dur > 0 ? Math.round(100 * SIM.t / SIM.dur) : 0;
   ctx.fillStyle = "#8b9bb4";
   ctx.textAlign = "right";
@@ -4702,12 +4829,7 @@ function renderCut2D(ctx, w, h) {
     xmx = F.xmx,
     ymn = F.ymn,
     ymx = F.ymx,
-    yk = F.yk,
-    half = F.half,
-    bcx = F.bcx,
-    bcy = F.bcy;
-  // «следить за резом»: при увеличении держим текущую точку в центре своей половины
-  var followOn = !!($("#vFollow") || {}).checked;
+    half = F.half;
   ctx.strokeStyle = "#243042";
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -4740,17 +4862,13 @@ function renderCut2D(ctx, w, h) {
     col: "#4ea1ff"
   }];
   var _loop6 = function _loop6() {
-    var pn = _panels[_i22];
+    var pn = _panels[_i23];
     var pl = pn.cx > half ? half : 0,
       pr = pl + half;
     // у каждой башни свой масштаб: увеличение одного торца не трогает другой
-    var vv = pn.side === "L" ? VIEW2.L : VIEW2.R;
-    var s = F.s0 * vv.zoom;
-    var followThis = followOn && pn.cur && vv.zoom > 1.02;
-    var ox = followThis ? -(pn.cur[0] - bcx) * s : vv.px;
-    var oy = followThis ? (pn.cur[1] - bcy) * s * yk : vv.py;
-    var X = x => pn.cx + ox + (x - bcx) * s;
-    var Y = y => h / 2 + oy - (y - bcy) * s * yk;
+    var pf = cut2dMap(pn.side, w, h, st);
+    var X = pf.X,
+      Y = pf.Y;
 
     // половина кадра — своя, чтобы увеличенный торец не заезжал на соседний
     ctx.save();
@@ -4808,7 +4926,7 @@ function renderCut2D(ctx, w, h) {
     ctx.strokeStyle = "#2f3f54";
     ctx.lineWidth = 1;
     ctx.setLineDash([5, 4]);
-    ctx.strokeRect(X(B.x0), Y(B.y1), (B.x1 - B.x0) * s, (B.y1 - B.y0) * s * yk);
+    ctx.strokeRect(X(B.x0), Y(B.y1), (B.x1 - B.x0) * pf.s, (B.y1 - B.y0) * pf.s * pf.F.yk);
     ctx.setLineDash([]);
 
     // торец заготовки = X0 (по нему выставляем ноль)
@@ -4849,9 +4967,9 @@ function renderCut2D(ctx, w, h) {
         for (_iterator15.s(); !(_step15 = _iterator15.n()).done;) {
           var sp = _step15.value;
           ctx.beginPath();
-          for (var _i23 = 0; _i23 < sp.pts.length; _i23++) {
-            var _q4 = sp.pts[_i23];
-            if (_i23 === 0) ctx.moveTo(X(_q4[0]), Y(_q4[1]));else ctx.lineTo(X(_q4[0]), Y(_q4[1]));
+          for (var _i24 = 0; _i24 < sp.pts.length; _i24++) {
+            var _q4 = sp.pts[_i24];
+            if (_i24 === 0) ctx.moveTo(X(_q4[0]), Y(_q4[1]));else ctx.lineTo(X(_q4[0]), Y(_q4[1]));
           }
           if (!sp.open) ctx.closePath(); // у открытого паза грань на обводе не замыкаем
           ctx.stroke();
@@ -4875,8 +4993,8 @@ function renderCut2D(ctx, w, h) {
         ctx.lineTo(X(b[0]), Y(b[1]));
         ctx.stroke();
       };
-      for (var _i24 = 1; _i24 <= st.i && _i24 < SIM.pts.length; _i24++) {
-        seg(SIM.pts[_i24 - 1][pn.side], SIM.pts[_i24][pn.side], SIM.pts[_i24].rapid);
+      for (var _i25 = 1; _i25 <= st.i && _i25 < SIM.pts.length; _i25++) {
+        seg(SIM.pts[_i25 - 1][pn.side], SIM.pts[_i25][pn.side], SIM.pts[_i25].rapid);
       }
       if (st.f > 1e-6 && SIM.pts[st.i]) seg(SIM.pts[st.i][pn.side], pn.cur, st.rapid);
       ctx.setLineDash([]);
@@ -4916,7 +5034,7 @@ function renderCut2D(ctx, w, h) {
     ctx.fillText(pn.title, 12 + (pn.cx > half ? half : 0), 18);
     ctx.restore();
   };
-  for (var _i22 = 0, _panels = panels; _i22 < _panels.length; _i22++) {
+  for (var _i23 = 0, _panels = panels; _i23 < _panels.length; _i23++) {
     _loop6();
   }
 }
@@ -4947,8 +5065,8 @@ function parseGcode(text) {
       var rapid = g[1] === "0";
       var v = {};
       var ok = true;
-      for (var _i25 = 0, _arr6 = ["Lx", "Ly", "Rx", "Ry"]; _i25 < _arr6.length; _i25++) {
-        var k = _arr6[_i25];
+      for (var _i26 = 0, _arr6 = ["Lx", "Ly", "Rx", "Ry"]; _i26 < _arr6.length; _i26++) {
+        var k = _arr6[_i26];
         var mm = line.match(re[k]);
         if (!mm) {
           ok = false;
@@ -5073,7 +5191,7 @@ function buildGcode() {
 /* ================= заполнение форм ================= */
 function fillCutSelects() {
   var _loop7 = function _loop7() {
-    var _arr7$_i = _slicedToArray(_arr7[_i26], 2),
+    var _arr7$_i = _slicedToArray(_arr7[_i27], 2),
       id = _arr7$_i[0],
       key = _arr7$_i[1];
     var sel = $(id);
@@ -5089,7 +5207,7 @@ function fillCutSelects() {
     });
     sel.value = clamp(CFG[key].idx, 0, Math.max(0, S.profiles.length - 1));
   };
-  for (var _i26 = 0, _arr7 = [["#cRootProf", "root"], ["#cTipProf", "tip"]]; _i26 < _arr7.length; _i26++) {
+  for (var _i27 = 0, _arr7 = [["#cRootProf", "root"], ["#cTipProf", "tip"]]; _i27 < _arr7.length; _i27++) {
     if (_loop7()) continue;
   }
 }
@@ -5491,7 +5609,7 @@ function renderSparPreview() {
   }];
   var bad = [];
   var _loop8 = function _loop8() {
-    var row = _rows[_i27];
+    var row = _rows[_i28];
     var ch = row.ch,
       prof = row.prof,
       cy = row.cy;
@@ -5599,8 +5717,8 @@ function renderSparPreview() {
           ctx.lineWidth = 1.3;
           ctx.setLineDash([3, 3]);
           ctx.fillStyle = col;
-          for (var _i28 = 0, _xs = xs; _i28 < _xs.length; _i28++) {
-            var _px = _xs[_i28];
+          for (var _i29 = 0, _xs = xs; _i29 < _xs.length; _i29++) {
+            var _px = _xs[_i29];
             var fxc = clamp((_px - padL) / Math.max(1, ch * sc), 0.02, 0.98);
             var ySurf = def.side === "bottom" ? yAtX(prepHalf(hh.lower, false), fxc) * ch : yAtX(prepHalf(hh.upper, true), fxc) * ch;
             var _py = cy - ySurf * sc;
@@ -5647,7 +5765,7 @@ function renderSparPreview() {
     ctx.font = "10px Arial";
     ctx.fillText(row.name + " · хорда " + ch.toFixed(0) + " · " + sizes + " мм", padL, cy - rowH * 0.5 + 10);
   };
-  for (var _i27 = 0, _rows = rows; _i27 < _rows.length; _i27++) {
+  for (var _i28 = 0, _rows = rows; _i28 < _rows.length; _i28++) {
     _loop8();
   }
   if (info) {
@@ -5770,8 +5888,8 @@ function projSparSnap() {
     w2: +sp.w2 || 24,
     h2: +sp.h2 || 12
   };
-  for (var _i29 = 0, _arr8 = ["root", "tip", "root2", "tip2"]; _i29 < _arr8.length; _i29++) {
-    var k = _arr8[_i29];
+  for (var _i30 = 0, _arr8 = ["root", "tip", "root2", "tip2"]; _i30 < _arr8.length; _i30++) {
+    var k = _arr8[_i30];
     var v = sp[k];
     if (v && typeof v === "object") o[k] = {
       x: +v.x || 0,
@@ -5959,7 +6077,7 @@ function projOpen(o) {
    Загрузка контура .dxf на каждую башню отдельно: слева корневая нервюра
    (оси X,Y), справа концевая (оси A,B), плюс синхронизация загруженных
    контуров. Включённая синхронизация держит обе башни на одном контуре
-   (прямая призма), выключенная — даёт резать крыло с разными нервюрами.
+   (прямая призма), выключенная — даёт резать два разных контура.
    Файл разбирается тем же parseDxf, что и импорт в «Профилих», но результат
    НЕ идёт в базу профилей: контур живёт в отдельном хранилище DXF (LS_DXF),
    в «Профилих» не появляется и в файл-базу не пишется — см. endProfile(). */
@@ -5979,8 +6097,8 @@ function loadDxf() {
   try {
     var raw = JSON.parse(localStorage.getItem(LS_DXF) || "null");
     if (!raw || typeof raw !== "object") return;
-    for (var _i30 = 0, _arr9 = ["root", "tip"]; _i30 < _arr9.length; _i30++) {
-      var k = _arr9[_i30];
+    for (var _i31 = 0, _arr9 = ["root", "tip"]; _i31 < _arr9.length; _i31++) {
+      var k = _arr9[_i31];
       var d = raw[k];
       if (d && Array.isArray(d.pts) && d.pts.length > 3) {
         DXF[k] = {
@@ -6226,8 +6344,8 @@ function renderDxf() {
   var i2 = $("#dxfTipInfo");
   if (i2) i2.innerHTML = dxfSideInfo("tip");
   // поля размера: заполняем из DXF, но не дёргаем, пока в них пишут
-  for (var _i31 = 0, _arr0 = [["#dxfRootCh", "root"], ["#dxfTipCh", "tip"]]; _i31 < _arr0.length; _i31++) {
-    var _arr0$_i = _slicedToArray(_arr0[_i31], 2),
+  for (var _i32 = 0, _arr0 = [["#dxfRootCh", "root"], ["#dxfTipCh", "tip"]]; _i32 < _arr0.length; _i32++) {
+    var _arr0$_i = _slicedToArray(_arr0[_i32], 2),
       id = _arr0$_i[0],
       key = _arr0$_i[1];
     var el = $(id);
@@ -6246,7 +6364,7 @@ function renderDxf() {
   if (c2) c2.disabled = !DXF.tip;
   var inf = $("#dxfInfo");
   if (inf) {
-    inf.innerHTML = "<b>Синхронизация:</b> " + (same ? "контуры совпадают — обе нервюры одинаковые, рез идёт прямой призмой." : "контуры разные — рез идёт по двум разным нервюрам (крыло с переменным профилем).") + "<br><b>Рез</b> — в этом же окне, ниже: заготовка, сдвиги торцов, параметры реза, " + "симуляция и УП. Лонжерона здесь нет; загруженный контур в базу профилей не попадает.";
+    inf.innerHTML = "<b>Синхронизация:</b> " + (same ? "контуры совпадают — обе нервюры одинаковые, рез идёт прямой призмой." : "контуры разные — у каждой башни свой контур и свой размер.") + "<br><b>Ширина реза</b> уводится в отход: по внешнему обводу — наружу, по внутреннему " + "вырезу — в его сторону, в материал детали проволока не заходит." + "<br><b>Рез</b> — в этом же окне, ниже: заготовка, сдвиги торцов, параметры реза, " + "симуляция и УП. Лонжерона здесь нет; загруженный контур в базу профилей не попадает.";
   }
   renderDxfCanvas();
 }
@@ -6319,6 +6437,21 @@ function mountCutCols(name) {
   if (!cols || !host) return;
   if (cols.parentElement !== host) host.appendChild(cols);
 }
+/* Тексты, которые в двух окнах звучат по-разному. В «Пенорезке DXF» деталь —
+   это загруженный контур, а не крыло, поэтому ни «крыла», ни «консоли» здесь нет.
+   Оба окна — один и тот же раздел (#cutCols), поэтому подписи меняются на месте. */
+function applyCutWording(dxf) {
+  var sh = $("#cShiftHint");
+  if (sh) {
+    sh.innerHTML = dxf ? "Каждый «Сдвиг X» двигает <b>только свою башню</b> — свой контур и его размер. " + "Перекос по задней кромке = сдвиг X концевой − сдвиг X корневой: <b id=\"cSweepHint\">0</b> мм. " + "<b>0</b> — обе задние кромки на одной глубине, больше нуля — концевая уходит глубже в блок. " + "Оба контура всегда стоят на концах заготовки." : "Каждый «Сдвиг X» двигает <b>только свою нервюру</b> — двигать крыло целиком можно полем " + "«от торца до ЗК». Стреловидность по ЗК = сдвиг X концевой − сдвиг X корневой: " + "<b id=\"cSweepHint\">0</b> мм. <b>0</b> — обе задние кромки на одной глубине (стреловидность " + "только по передней кромке), больше нуля — концевая уходит глубже в блок. Обе нервюры всегда " + "стоят на концах заготовки.";
+    updSweepHint();
+  }
+  var mir = $("#cMirror");
+  if (mir) {
+    mir.textContent = dxf ? "Правая ↔ левая башня" : "Правая ↔ левая консоль";
+    mir.title = dxf ? "Поменять башни местами: загруженные контуры, сдвиги, углы и размеры переедут с левой на правую и наоборот" : "Режешь правую консоль — нажми, и профили поменяются местами: то, что было слева (корневая нервюра), переедет вправо (концевая) и наоборот. Лонжерон переедет вместе с ними — получишь рез второй консоли";
+  }
+}
 function setCutSrc(src) {
   CUT_SRC = src === "dxf" ? "dxf" : "profiles";
   var dxf = CUT_SRC === "dxf";
@@ -6339,6 +6472,7 @@ function setCutSrc(src) {
   show("#dxfPill", dxf);
   var t = $("#cutSrcTitle");
   if (t) t.textContent = dxf ? "Пенорезка DXF" : "Заготовка и концы";
+  applyCutWording(dxf);
 }
 function switchTab(name) {
   $$("#tabs button").forEach(b => b.classList.toggle("act", b.dataset.tab === name));
@@ -6697,8 +6831,8 @@ function dxfText(name, pts, chord) {
   g(330, "0");
   g(100, "AcDbSymbolTable");
   g(70, "3");
-  for (var _i32 = 0, _arr1 = [["14", "BYBLOCK", ""], ["15", "BYLAYER", ""], ["16", "CONTINUOUS", "Solid line"]]; _i32 < _arr1.length; _i32++) {
-    var _arr1$_i = _slicedToArray(_arr1[_i32], 3),
+  for (var _i33 = 0, _arr1 = [["14", "BYBLOCK", ""], ["15", "BYLAYER", ""], ["16", "CONTINUOUS", "Solid line"]]; _i33 < _arr1.length; _i33++) {
+    var _arr1$_i = _slicedToArray(_arr1[_i33], 3),
       h = _arr1$_i[0],
       lt = _arr1$_i[1],
       desc = _arr1$_i[2];
@@ -6721,8 +6855,8 @@ function dxfText(name, pts, chord) {
   g(330, "0");
   g(100, "AcDbSymbolTable");
   g(70, "2");
-  for (var _i33 = 0, _arr10 = [["10", "0", "7"], ["11", "AIRFOIL", "3"]]; _i33 < _arr10.length; _i33++) {
-    var _arr10$_i = _slicedToArray(_arr10[_i33], 3),
+  for (var _i34 = 0, _arr10 = [["10", "0", "7"], ["11", "AIRFOIL", "3"]]; _i34 < _arr10.length; _i34++) {
+    var _arr10$_i = _slicedToArray(_arr10[_i34], 3),
       _h = _arr10$_i[0],
       lay = _arr10$_i[1],
       col = _arr10$_i[2];
@@ -6840,8 +6974,8 @@ function dxfText(name, pts, chord) {
   /* ---- BLOCKS ---- */
   g(0, "SECTION");
   g(2, "BLOCKS");
-  for (var _i34 = 0, _arr11 = [["20", "21", "*MODEL_SPACE", "1F"], ["1D", "23", "*PAPER_SPACE", "1B"]]; _i34 < _arr11.length; _i34++) {
-    var _arr11$_i = _slicedToArray(_arr11[_i34], 4),
+  for (var _i35 = 0, _arr11 = [["20", "21", "*MODEL_SPACE", "1F"], ["1D", "23", "*PAPER_SPACE", "1B"]]; _i35 < _arr11.length; _i35++) {
+    var _arr11$_i = _slicedToArray(_arr11[_i35], 4),
       bh = _arr11$_i[0],
       eh = _arr11$_i[1],
       bh2 = _arr11$_i[2],
@@ -7080,8 +7214,8 @@ function dxfEntity(pairs, i) {
     j++;
   }
   var one = code => {
-    for (var _i35 = 0, _data = data; _i35 < _data.length; _i35++) {
-      var _data$_i = _slicedToArray(_data[_i35], 2),
+    for (var _i36 = 0, _data = data; _i36 < _data.length; _i36++) {
+      var _data$_i = _slicedToArray(_data[_i36], 2),
         c = _data$_i[0],
         v = _data$_i[1];
       if (c === code) {
@@ -7264,24 +7398,24 @@ function dxfJoin(paths, tol) {
     return best;
   }
   for (var i = 0; i < live.length; i++) reg(i);
-  for (var _i36 = 0; _i36 < live.length; _i36++) {
-    if (busy[_i36]) continue;
+  for (var _i37 = 0; _i37 < live.length; _i37++) {
+    if (busy[_i37]) continue;
     for (var dir = 0; dir < 2; dir++) {
       for (var guard = 0; guard < 20000; guard++) {
-        var p = live[_i36];
+        var p = live[_i37];
         var q = dir ? p[p.length - 1] : p[0];
-        var e = find(q, _i36);
+        var e = find(q, _i37);
         if (!e) break;
         var B = live[e.i];
         if (dir === 0) {
           if (e.s === 0) B = B.slice().reverse(); // конец B должен лечь на начало A
-          live[_i36] = B.slice(0, -1).concat(p);
+          live[_i37] = B.slice(0, -1).concat(p);
         } else {
           if (e.s === 1) B = B.slice().reverse(); // начало B должно лечь на конец A
-          live[_i36] = p.concat(B.slice(1));
+          live[_i37] = p.concat(B.slice(1));
         }
         busy[e.i] = true;
-        reg(_i36);
+        reg(_i37);
       }
     }
   }
@@ -7350,8 +7484,8 @@ function dxfOutline(paths) {
     xmax = -Infinity,
     ymin = Infinity,
     ymax = -Infinity;
-  for (var _i37 = 0, _clean = clean; _i37 < _clean.length; _i37++) {
-    var p = _clean[_i37];
+  for (var _i38 = 0, _clean = clean; _i38 < _clean.length; _i38++) {
+    var p = _clean[_i38];
     var _iterator30 = _createForOfIteratorHelper(p),
       _step30;
     try {
@@ -7550,8 +7684,8 @@ function profileFromCad(raw) {
   }
   var up = [],
     lo = [];
-  for (var _i38 = 0, _uniq = uniq; _i38 < _uniq.length; _i38++) {
-    var x = _uniq[_i38];
+  for (var _i39 = 0, _uniq = uniq; _i39 < _uniq.length; _i39++) {
+    var x = _uniq[_i39];
     var r = edgeY(x);
     if (!r) continue;
     up.push([x, r[0]]);
@@ -7561,8 +7695,8 @@ function profileFromCad(raw) {
   var y0 = (up[0][1] + lo[0][1]) / 2; // передняя кромка — середина торца
   var out = [];
   for (var i = up.length - 1; i >= 0; i--) out.push([(up[i][0] - xmin) / chord, (up[i][1] - y0) / chord]);
-  for (var _i39 = 0; _i39 < lo.length; _i39++) {
-    var q = [(lo[_i39][0] - xmin) / chord, (lo[_i39][1] - y0) / chord];
+  for (var _i40 = 0; _i40 < lo.length; _i40++) {
+    var q = [(lo[_i40][0] - xmin) / chord, (lo[_i40][1] - y0) / chord];
     var prev = out[out.length - 1];
     // плоский торец: верх и низ кромки стоят на одном x — обе точки нужны,
     // иначе толщина на торце схлопывается в ноль и контур получает «клюв»
@@ -7747,7 +7881,7 @@ function ribCutoutsMM(endKey, prof, chord) {
         // устье — по самому обводу: дуга между стенками
         var _n = 24,
           arc = [];
-        for (var _i40 = 0; _i40 <= _n; _i40++) arc.push([clamp(x1 + (x2 - x1) * _i40 / _n, 0, chord), ribY(prof, up, (x1 + (x2 - x1) * _i40 / _n) / Math.max(1, chord), chord)]);
+        for (var _i41 = 0; _i41 <= _n; _i41++) arc.push([clamp(x1 + (x2 - x1) * _i41 / _n, 0, chord), ribY(prof, up, (x1 + (x2 - x1) * _i41 / _n) / Math.max(1, chord), chord)]);
         out.push({
           kind: "poly",
           yc,
@@ -7844,8 +7978,8 @@ function ribSheetCanvas(e) {
   ctx.lineTo(X(0), Y(0) - 2.2 * P);
   ctx.moveTo(X(e.chord), Y(0));
   ctx.lineTo(X(e.chord), Y(0) - 2.2 * P);
-  for (var _i41 = 0, _arr12 = [0.25, 0.5, 0.75]; _i41 < _arr12.length; _i41++) {
-    var fr = _arr12[_i41];
+  for (var _i42 = 0, _arr12 = [0.25, 0.5, 0.75]; _i42 < _arr12.length; _i42++) {
+    var fr = _arr12[_i42];
     var xx = X(e.chord * fr);
     ctx.moveTo(xx, Y(0) - 2 * P);
     ctx.lineTo(xx, Y(0) + 2 * P);
@@ -7856,8 +7990,8 @@ function ribSheetCanvas(e) {
   ctx.font = Math.round(2.6 * P) + 'px "Segoe UI", Arial';
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
-  for (var _i42 = 0, _arr13 = [0.25, 0.5, 0.75]; _i42 < _arr13.length; _i42++) {
-    var _fr = _arr13[_i42];
+  for (var _i43 = 0, _arr13 = [0.25, 0.5, 0.75]; _i43 < _arr13.length; _i43++) {
+    var _fr = _arr13[_i43];
     ctx.fillText(String(_fr * 100), X(e.chord * _fr), Y(0) + 5.2 * P);
   }
 
@@ -7946,8 +8080,8 @@ function ribA4Pages(sheet, e) {
     }
   }
   var pages = [];
-  for (var _i43 = 0; _i43 < M; _i43++) {
-    var xS = _i43 * (printW - PDF_JOINT);
+  for (var _i44 = 0; _i44 < M; _i44++) {
+    var xS = _i44 * (printW - PDF_JOINT);
     var cv = document.createElement("canvas");
     cv.width = pW * P;
     cv.height = pH * P;
@@ -7962,7 +8096,7 @@ function ribA4Pages(sheet, e) {
     pc.textAlign = "left";
     pc.textBaseline = "alphabetic";
     pc.font = "600 " + Math.round(3.6 * P) + 'px "Segoe UI", Arial';
-    pc.fillText(e.title + " · " + (e.prof && e.prof.name || "—") + " · хорда " + Math.round(e.chord) + " мм" + (M > 1 ? " · лист " + (_i43 + 1) + " из " + M : ""), PDF_PAD * P, 10 * P);
+    pc.fillText(e.title + " · " + (e.prof && e.prof.name || "—") + " · хорда " + Math.round(e.chord) + " мм" + (M > 1 ? " · лист " + (_i44 + 1) + " из " + M : ""), PDF_PAD * P, 10 * P);
     // строка внизу листа
     pc.fillStyle = "#444";
     pc.font = Math.round(2.6 * P) + 'px "Segoe UI", Arial';
@@ -8047,8 +8181,8 @@ function ribPdf() {
     title: "КОНЦЕВАЯ НЕРВЮРА"
   }];
   var pages = [];
-  for (var _i44 = 0, _ends = ends; _i44 < _ends.length; _i44++) {
-    var e = _ends[_i44];
+  for (var _i45 = 0, _ends = ends; _i45 < _ends.length; _i45++) {
+    var e = _ends[_i45];
     ribA4Pages(ribSheetCanvas(e), e).forEach(p => pages.push(p));
   }
   var nm = ((rp.name === tp.name ? rp.name : rp.name + " - " + tp.name) || "профиль").replace(/[\\/:*?"<>|]+/g, "-").trim();
@@ -8575,7 +8709,7 @@ function init() {
     });
   });
   // правая ↔ левая консоль: всё, что было на левой башне, переезжает на правую и наоборот —
-  // вырезал правое крыло, нажал кнопку и режешь левое той же настройкой
+  // вырезал правую деталь, нажал кнопку и режешь левую той же настройкой
   $("#cMirror").onclick = () => {
     var sr = JSON.stringify(CFG.root),
       st = JSON.stringify(CFG.tip);
@@ -8944,7 +9078,8 @@ function init() {
     var drag = null,
       lx = 0,
       ly = 0,
-      dragPanel = 0;
+      dragPanel = 0,
+      move2d = null;
     var hoverPanel = 0; // 0 — левая башня, 1 — правая (та, где стоит курсор)
 
     var v2 = i => i ? VIEW2.R : VIEW2.L;
@@ -9097,6 +9232,24 @@ function init() {
         return;
       }
       if (VDRAW === "2d" && e.button === 0) {
+        var r2 = cv.getBoundingClientRect();
+        var mx = e.clientX - r2.left,
+          my = e.clientY - r2.top;
+        var side = mx > r2.width / 2 ? "R" : "L";
+        var st = simState();
+        // За контур — двигаем профиль этого торца (Сдвиг X, привязка к сетке).
+        // За пустое место — как раньше, сдвигаем вид.
+        if (cut2dHit(side, r2.width, r2.height, mx, my, st, 12)) {
+          var key = side === "L" ? "root" : "tip";
+          move2d = {
+            key,
+            x0: e.clientX,
+            cfg0: +CFG[key].x || 0,
+            s: cut2dMap(side, r2.width, r2.height, st).s || 1
+          };
+          grab(e, "move2d");
+          return;
+        }
         freezeFollow(e.clientX);
         grab(e, "pan2d"); // в 2D обычное перетаскивание тоже сдвигает
         return;
@@ -9110,8 +9263,17 @@ function init() {
     });
     cv.addEventListener("pointermove", e => {
       var rect = cv.getBoundingClientRect();
-      hoverPanel = e.clientX - rect.left > rect.width / 2 ? 1 : 0;
-      if (!drag) return;
+      var mxp = e.clientX - rect.left,
+        myp = e.clientY - rect.top;
+      hoverPanel = mxp > rect.width / 2 ? 1 : 0;
+      if (!drag) {
+        // над контуром в «Торцах 2D» — курсор «тянуть влево/вправо»
+        if (VDRAW === "2d" && LAST) {
+          var side = mxp > rect.width / 2 ? "R" : "L";
+          cv.style.cursor = cut2dHit(side, rect.width, rect.height, mxp, myp, simState(), 12) ? "ew-resize" : "";
+        } else if (cv.style.cursor) cv.style.cursor = "";
+        return;
+      }
       var dx = e.clientX - lx,
         dy = e.clientY - ly;
       lx = e.clientX;
@@ -9125,6 +9287,21 @@ function init() {
       } else if (drag === "pansync") {
         VSYNC.px = clamp(VSYNC.px + dx, -cv.clientWidth * 2, cv.clientWidth * 2);
         VSYNC.py = clamp(VSYNC.py + dy, -cv.clientHeight * 2, cv.clientHeight * 2);
+      } else if (drag === "move2d" && move2d) {
+        // Профиль едет влево/вправо, «Сдвиг X» прилипает к сетке 10 мм (Alt — по 1 мм).
+        // Новый сдвиг считается от начала перетаскивания, а не от прошлого кадра.
+        var step = e.altKey ? 1 : 10;
+        var dmm = (e.clientX - move2d.x0) / (move2d.s || 1);
+        var pos = CFG.faceOff + move2d.cfg0 + dmm;
+        var nx = Math.round((Math.round(pos / step) * step - CFG.faceOff) * 10) / 10;
+        var id = move2d.key === "root" ? "#cRootX" : "#cTeOff";
+        var el = $(id);
+        if (el && Math.abs((+el.value || 0) - nx) > 1e-9) {
+          el.value = nx;
+          $("#cGcode").value = "";
+          $("#cGcodeInfo").textContent = "Параметры изменены — сформируй УП заново";
+          refreshCut();
+        }
       } else {
         // сдвигается только тот торец, с которого начали тянуть
         var vv = v2(dragPanel);
@@ -9133,8 +9310,14 @@ function init() {
       }
       renderCut();
     });
-    cv.addEventListener("pointerup", () => drag = null);
-    cv.addEventListener("pointercancel", () => drag = null);
+    cv.addEventListener("pointerup", () => {
+      drag = null;
+      move2d = null;
+    });
+    cv.addEventListener("pointercancel", () => {
+      drag = null;
+      move2d = null;
+    });
     cv.addEventListener("contextmenu", e => e.preventDefault());
     cv.addEventListener("dblclick", e => {
       var rect = cv.getBoundingClientRect();
