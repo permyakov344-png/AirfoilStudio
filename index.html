@@ -1024,6 +1024,7 @@ let VIEW = { yaw: 142, pitch: 22, zoom: 1, px: 0, py: 0 };        // 3D: пов�
 // 2D «Торцы»: у каждой башни свой масштаб и сдвиг — приближается только тот торец, где курсор
 let VIEW2 = { L: { zoom: 1, px: 0, py: 0 }, R: { zoom: 1, px: 0, py: 0 } };
 let DRAG2D = null;                       // какая башня тянется сейчас — для подписи сдвига
+let CUT_FRAME_LOCK = null;               // кадр, замороженный на время перетаскивания мышью
 let LUTC = null;
 let edDrag = -1, edMap = null;
 const ED = { zoom:1, cx:null, cy:null, baseS:1, pan:null, preview:null };
@@ -3970,12 +3971,75 @@ function renderCut(){
   fit("заготовка " + (x1 - x0) + " мм", qb[0]-34, qb[1]+16);
 }
 
+/* Точки обоих торцов в координатах «без сдвига башни». По ним строится кадр 2D-вида
+   и вида «Синхронизация». Если считать кадр по уже сдвинутым точкам, то при каждом
+   перетаскивании он пересчитывается заново и масштаб подстраивается под новый габарит —
+   контур на экране остаётся на месте, хотя сдвиг меняется. Со стороны это выглядит
+   как «мышь не работает». Поэтому кадр — от контуров без сдвига. */
+function cutFitPts(){
+  if(!LAST || !LAST.R || !LAST.T) return null;
+  const fo = +CFG.faceOff || 0;
+  const un = (pts, cfg) => (pts || []).map(p => [p[0] - fo - (+(cfg || {}).x || 0),
+                                                p[1] - (+(cfg || {}).y || 0)]);
+  return un(LAST.R.pts, CFG.root).concat(un(LAST.T.pts, CFG.tip));
+}
+
+/* Габарит обоих контуров БЕЗ сдвига башни плюс запас на сдвиг.
+   По нему строятся оба вида (и «Торцы 2D», и «Синхронизация») — чтобы кадр не
+   пересчитывался на каждом движении мыши. Если считать кадр по уже сдвинутым
+   точкам, масштаб подстраивается под новый габарит, контур на экране остаётся
+   на месте, и перетаскивание выглядит как «мышь не работает». */
+function cutFitBox(B){
+  // Пока контур тянут мышью, кадр заморожен: иначе рамка расширяется вслед за
+  // курсором, масштаб едет, и контур уходит из-под мыши.
+  if(CUT_FRAME_LOCK) return CUT_FRAME_LOCK;
+  const fit = cutFitPts();
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  if(fit && fit.length){
+    for(const p of fit){
+      if(!isFinite(p[0]) || !isFinite(p[1])) continue;
+      if(p[0] < x0) x0 = p[0]; if(p[0] > x1) x1 = p[0];
+      if(p[1] < y0) y0 = p[1]; if(p[1] > y1) y1 = p[1];
+    }
+  }
+  if(!isFinite(x0) && B){ x0 = B.x0; x1 = B.x1; y0 = B.y0; y1 = B.y1; }
+  if(!isFinite(x0)){ x0 = 0; x1 = 100; y0 = -25; y1 = 25; }
+  const ext = Math.max(x1 - x0, y1 - y0, 40);
+  // запас на сдвиг: контур не упирается в край панели, и его видно, как он едет
+  const pm = Math.max(25, ext * 0.45);
+  let bx0 = x0 - pm, bx1 = x1 + pm, by0 = y0 - pm, by1 = y1 + pm;
+  // Если сдвинули дальше запаса, рамка расширяется ступенями по 25 мм: иначе контур
+  // уходит за панель. Ступень нужна, чтобы кадр не «дышал» на каждом миллиметре —
+  // иначе масштаб менялся бы всё время и перетаскивание снова выглядело бы мёртвым.
+  const now = (LAST && LAST.R && LAST.T) ? LAST.R.pts.concat(LAST.T.pts) : null;
+  if(now && now.length){
+    let nx0 = Infinity, nx1 = -Infinity, ny0 = Infinity, ny1 = -Infinity;
+    for(const p of now){
+      if(!isFinite(p[0]) || !isFinite(p[1])) continue;
+      if(p[0] < nx0) nx0 = p[0]; if(p[0] > nx1) nx1 = p[0];
+      if(p[1] < ny0) ny0 = p[1]; if(p[1] > ny1) ny1 = p[1];
+    }
+    const q = 25, qm = (v, ref) => Math.ceil(Math.abs(v - ref) / q) * q * Math.sign(v - ref);
+    if(isFinite(nx0) && nx0 < bx0) bx0 = bx0 + qm(nx0, bx0);
+    if(isFinite(nx1) && nx1 > bx1) bx1 = bx1 + qm(nx1, bx1);
+    if(isFinite(ny0) && ny0 < by0) by0 = by0 + qm(ny0, by0);
+    if(isFinite(ny1) && ny1 > by1) by1 = by1 + qm(ny1, by1);
+  }
+  return { x0: bx0, x1: bx1, y0: by0, y1: by1 };
+}
+
 /* Кадр 2D-вида: общая рамка для отрисовки и для зума колесом.
+   Кадр строится по контурам обеих башен, а не по целой заготовке: в блоке
+   400 × 250 нервюра 40 мм превращалась в точку и сдвиг по Y был не виден совсем.
+   Обе панели берут один и тот же кадр, поэтому взаимное положение башен по высоте
+   честное — так же, как в симуляции и в виде «Синхронизация».
+   Заготовка по-прежнему рисуется пунктиром и может выйти за кадр.
    Масштаб «вписать» считается один раз, зум пользователя — сверху. */
 function cut2dFrame(w, h, B){
-  const xmn = Math.min(B.x0, -(Math.max(0, +CFG.lead || 0)) - 6), xmx = B.x1;
-  const ymn = B.y0, ymx = B.y1;
-  const pad = 30, half = w/2;
+  const fb = CUT_FRAME_LOCK || cutFitBox(B);
+  const xmn = Math.min(fb.x0, B ? B.x0 : fb.x0), xmx = fb.x1;
+  const ymn = fb.y0, ymx = fb.y1;
+  const pad = 14, half = w/2;
   const yk = 1;   // «×3 по Y» убрано: торец всегда в натуральную величину, как на сетке 10 мм
   const s0 = Math.min((half - 2*pad)/Math.max(xmx-xmn, 1), (h - 2*pad)/(Math.max(ymx-ymn, 1)*yk));
   return { xmn, xmx, ymn, ymx, yk, half, s0, bcx:(xmn+xmx)/2, bcy:(ymn+ymx)/2 };
@@ -4077,10 +4141,12 @@ function renderCutSync(ctx, w, h){
   const B = C.block;
   // Кадр строим по САМИМ КОНТУРАМ, а не по всей заготовке: блок длиной 800 мм
   // рядом с нервюрой 40 мм делал контуры крошечными, и сдвиг на 40 мм выглядел
-  // как «стоят на месте». Заготовка по-прежнему рисуется пунктиром, но масштаб
-  // задают торцы — именно их и надо сравнивать.
-  const all = C.R.pts.concat(C.T.pts);
-  const m0 = makeMap(all, w, h, 44);
+  // как «стоят на месте».
+  // И берём точки БЕЗ сдвига башни: иначе кадр пересчитывается на каждом движении
+  // мыши, масштаб подстраивается, и контур на экране остаётся на месте — выглядит
+  // так, будто перетаскивание не работает. Большой отступ оставляет место, куда ехать.
+  const fb = cutFitBox(B);
+  const m0 = makeMap([[fb.x0, fb.y0], [fb.x1, fb.y1]], w, h, Math.max(10, Math.min(w, h) * 0.06));
   VSYNC_M0 = m0;                             // базовая проекция — для зума вокруг курсора
   const z = Math.max(0.2, +VSYNC.zoom || 1);        // свой зум и сдвиг — 3D/2D не трогаем
   const map = {
@@ -4191,11 +4257,12 @@ function renderCutSync(ctx, w, h){
   ctx.fillText("пройдено " + pr + " %", w - 8, 6);
   // Тянешь контур прямо в этом виде — сразу видно, какая башня поехала и на сколько.
   if(DRAG2D){
-    const v = +CFG[DRAG2D.key].x || 0;
+    const c = CFG[DRAG2D.key] || {};
     ctx.textAlign = "center";
     ctx.fillStyle = "#ffd479";
     ctx.fillText((DRAG2D.key === "root" ? "тянешь левую" : "тянешь правую") +
-                 " · сдвиг X = " + (Math.round(v * 10) / 10) + " мм", w/2, h - 10);
+                 " · сдвиг X = " + (Math.round((+c.x || 0) * 10) / 10) + " мм" +
+                 " · Y = " + (Math.round((+c.y || 0) * 10) / 10) + " мм", w/2, h - 10);
   }
   ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
 }
@@ -4356,9 +4423,10 @@ function renderCut2D(ctx, w, h){
   // Пока тянешь — крупно показываем, куда встал сдвиг: иначе на мелком
   // масштабе скачок 10 мм легко не заметить и кажется, что контур не движется.
   if(DRAG2D){
-    const v = +CFG[DRAG2D.key].x || 0;
+    const c = CFG[DRAG2D.key] || {};
     const txt = (DRAG2D.key === "root" ? "левая башня" : "правая башня") +
-                " · сдвиг X = " + (Math.round(v * 10) / 10) + " мм";
+                " · X = " + (Math.round((+c.x || 0) * 10) / 10) +
+                " · Y = " + (Math.round((+c.y || 0) * 10) / 10) + " мм";
     ctx.save();
     ctx.font = "13px Segoe UI"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     const tw = ctx.measureText(txt).width;
@@ -7389,8 +7457,13 @@ function init(){
         // За пустое место — как раньше, сдвигаем вид.
         if(cut2dHit(side, r2.width, r2.height, mx, my, st, 12)){
           const key = side === "L" ? "root" : "tip";
-          move2d = { key, x0: e.clientX, cfg0: +CFG[key].x || 0,
-                     s: cut2dMap(side, r2.width, r2.height, st).s || 1 };
+          const pf2 = cut2dMap(side, r2.width, r2.height, st);
+          move2d = { key, x0: e.clientX, y0: e.clientY,
+                     cfg0: +CFG[key].x || 0, cfg0y: +CFG[key].y || 0,
+                     s: pf2.s || 1 };
+          // кадр заморожен, пока тянем — контур идёт за курсором 1:1.
+          // В lock кладём габарит (x0/x1/y0/y1): у кадра 2D поля называются xmn/xmx/ymn/ymx.
+          CUT_FRAME_LOCK = { x0: pf2.F.xmn, x1: pf2.F.xmx, y0: pf2.F.ymn, y1: pf2.F.ymx };
           DRAG2D = { key };
           grab(e, "move2d");
           return;
@@ -7407,8 +7480,10 @@ function init(){
         const mx = e.clientX - r2.left, my = e.clientY - r2.top;
         const key = syncHit(r2.width, r2.height, mx, my, simState());
         if(key){
-          move2d = { key, x0: e.clientX, cfg0: +CFG[key].x || 0,
+          move2d = { key, x0: e.clientX, y0: e.clientY,
+                     cfg0: +CFG[key].x || 0, cfg0y: +CFG[key].y || 0,
                      s: (VSYNC_MAP && VSYNC_MAP.s) || 1 };
+          CUT_FRAME_LOCK = cutFitBox(LAST && LAST.block);   // кадр заморожен на время перетаскивания
           DRAG2D = { key };
           grab(e, "move2d");
           return;
@@ -7423,14 +7498,14 @@ function init(){
       const mxp = e.clientX - rect.left, myp = e.clientY - rect.top;
       hoverPanel = mxp > rect.width/2 ? 1 : 0;
       if(!drag){
-        // над контуром в «Торцах 2D» — курсор «тянуть влево/вправо»
+        // над контуром в «Торцах 2D» курсор «тянуть»: двигать можно и влево/вправо, и вверх/вниз
         if(VDRAW === "2d" && LAST){
           const side = mxp > rect.width/2 ? "R" : "L";
           cv.style.cursor = cut2dHit(side, rect.width, rect.height, mxp, myp, simState(), 12)
-            ? "ew-resize" : "";
+            ? "move" : "";
         } else if(VDRAW === "sync" && LAST){
           cv.style.cursor = syncHit(rect.width, rect.height, mxp, myp, simState())
-            ? "ew-resize" : "";
+            ? "move" : "";
         } else if(cv.style.cursor) cv.style.cursor = "";
         return;
       }
@@ -7446,21 +7521,30 @@ function init(){
         VSYNC.px = clamp(VSYNC.px + dx, -cv.clientWidth*2, cv.clientWidth*2);
         VSYNC.py = clamp(VSYNC.py + dy, -cv.clientHeight*2, cv.clientHeight*2);
       } else if(drag === "move2d" && move2d){
-        // Профиль едет влево/вправо, «Сдвиг X» прилипает к сетке 10 мм (Alt — по 1 мм).
-        // Новый сдвиг считается от начала перетаскивания, а не от прошлого кадра.
+        // Профиль едет и влево/вправо (Сдвиг X), и вверх/вниз (Сдвиг Y).
+        // Оба сдвига прилипают к сетке 10 мм (Alt — по 1 мм) и считаются от начала
+        // перетаскивания, а не от прошлого кадра.
         const step = e.altKey ? 1 : 10;
-        const dmm = (e.clientX - move2d.x0) / (move2d.s || 1);
-        const pos = CFG.faceOff + move2d.cfg0 + dmm;
-        const nx = Math.round((Math.round(pos/step)*step - CFG.faceOff) * 10) / 10;
-        const id = move2d.key === "root" ? "#cRootX" : "#cTeOff";
+        const s = move2d.s || 1;
+        const dmmX = (e.clientX - move2d.x0) / s;
+        const dmmY = -(e.clientY - move2d.y0) / s;      // экранный Y растёт вниз, координата модели — вверх
+        const posX = CFG.faceOff + move2d.cfg0 + dmmX;
+        const nx = Math.round((Math.round(posX/step)*step - CFG.faceOff) * 10) / 10;
+        const ny = Math.round(Math.round((move2d.cfg0y + dmmY)/step)*step * 10) / 10;
+        const idX = move2d.key === "root" ? "#cRootX" : "#cTeOff";
+        const idY = move2d.key === "root" ? "#cRootY" : "#cTipY";
         DXF_MASTER = move2d.key;           // тянули эту башню — она и ведущая
-        const el = $(id);
-        if(el && Math.abs((+el.value || 0) - nx) > 1e-9){
-          el.value = nx;
+        const ex = $(idX), ey = $(idY);
+        let changed = false;
+        if(ex && Math.abs((+ex.value || 0) - nx) > 1e-9){ ex.value = nx; changed = true; }
+        if(ey && Math.abs((+ey.value || 0) - ny) > 1e-9){ ey.value = ny; changed = true; }
+        if(changed){
           // При синхронизации тянем обе башни сразу — иначе они разъедутся.
           if(CUT_SRC === "dxf" && dxfSyncOn()){
-            const other = $(id === "#cRootX" ? "#cTeOff" : "#cRootX");
-            if(other) other.value = nx;
+            const oX = $(idX === "#cRootX" ? "#cTeOff" : "#cRootX");
+            const oY = $(idY === "#cRootY" ? "#cTipY" : "#cRootY");
+            if(oX) oX.value = nx;
+            if(oY) oY.value = ny;
           }
           $("#cGcode").value = "";
           $("#cGcodeInfo").textContent = "Параметры изменены — сформируй УП заново";
@@ -7475,7 +7559,7 @@ function init(){
       renderCut();
     });
     const endDrag = () => {
-      drag = null; move2d = null;
+      drag = null; move2d = null; CUT_FRAME_LOCK = null;
       if(DRAG2D){ DRAG2D = null; renderCut(); }
     };
     cv.addEventListener("pointerup", endDrag);

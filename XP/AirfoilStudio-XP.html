@@ -929,11 +929,14 @@ table.pts tr:hover td{background:#151d29}
         и прилипает к сетке 10 мм (с зажатым <b>Alt</b> — по 1 мм). За пустое место или с Shift
         тянется вид. Тот же сдвиг работает и в виде <b>Синхронизация</b> — там сразу видно,
         какая башня поехала и на сколько (числа сдвига X/Y внизу кадра).</p>
-        <p>Режим <b>Синхронизация</b> — вид со стороны проволоки, вдоль её оси. Когда обе башни идут
-        по одинаковым контурам, проволока в этом виде — точка: башни рисуются одним маркером
-        (синяя и оранжевая половина). Как только контуры расходятся — появляется линия проволоки
-        и видно, насколько одна башня отстала от другой. Зум колесом — вокруг курсора,
-        перетаскивание — сдвиг, у этого вида свой масштаб (подпись «синхр. ×…»).</p>
+        <p>Режим <b>Синхронизация</b> — вид со стороны проволоки, вдоль её оси. Кадр строится
+        по самим торцам (а не по всей заготовке), поэтому контуры видно крупно и сдвиг на
+        10–20 мм не теряется. Когда обе башни идут по одинаковым контурам, проволока в этом
+        виде — точка: башни рисуются одним маркером (синяя и оранжевая половина). Как только
+        контуры расходятся — появляется линия проволоки и видно, насколько одна башня отстала
+        от другой; снизу кадра написаны числа сдвига по X и Y. Контур можно потянуть мышью
+        прямо здесь. Зум колесом — вокруг курсора, перетаскивание за пустое место — сдвиг,
+        у этого вида свой масштаб (подпись «синхр. ×…»).</p>
         <p><b>Приближение.</b> Колесо мыши приближает к курсору, и у каждой башни в «Торцах 2D»
         <b>свой масштаб</b>: крутишь колесо над левой — увеличивается только левая, правая остаётся как была.
         Пределы ×1…×40 в торцах и ×0.2…×14 в 3D. Рядом с кнопками <b>−</b> / <b>+</b> две подписи
@@ -1113,6 +1116,7 @@ var VIEW2 = {
   }
 };
 var DRAG2D = null; // какая башня тянется сейчас — для подписи сдвига
+var CUT_FRAME_LOCK = null; // кадр, замороженный на время перетаскивания мышью
 var LUTC = null;
 var edDrag = -1,
   edMap = null;
@@ -4574,14 +4578,123 @@ function renderCut() {
   fit("заготовка " + (x1 - x0) + " мм", qb[0] - 34, qb[1] + 16);
 }
 
+/* Точки обоих торцов в координатах «без сдвига башни». По ним строится кадр 2D-вида
+   и вида «Синхронизация». Если считать кадр по уже сдвинутым точкам, то при каждом
+   перетаскивании он пересчитывается заново и масштаб подстраивается под новый габарит —
+   контур на экране остаётся на месте, хотя сдвиг меняется. Со стороны это выглядит
+   как «мышь не работает». Поэтому кадр — от контуров без сдвига. */
+function cutFitPts() {
+  if (!LAST || !LAST.R || !LAST.T) return null;
+  var fo = +CFG.faceOff || 0;
+  var un = (pts, cfg) => (pts || []).map(p => [p[0] - fo - (+(cfg || {}).x || 0), p[1] - (+(cfg || {}).y || 0)]);
+  return un(LAST.R.pts, CFG.root).concat(un(LAST.T.pts, CFG.tip));
+}
+
+/* Габарит обоих контуров БЕЗ сдвига башни плюс запас на сдвиг.
+   По нему строятся оба вида (и «Торцы 2D», и «Синхронизация») — чтобы кадр не
+   пересчитывался на каждом движении мыши. Если считать кадр по уже сдвинутым
+   точкам, масштаб подстраивается под новый габарит, контур на экране остаётся
+   на месте, и перетаскивание выглядит как «мышь не работает». */
+function cutFitBox(B) {
+  // Пока контур тянут мышью, кадр заморожен: иначе рамка расширяется вслед за
+  // курсором, масштаб едет, и контур уходит из-под мыши.
+  if (CUT_FRAME_LOCK) return CUT_FRAME_LOCK;
+  var fit = cutFitPts();
+  var x0 = Infinity,
+    x1 = -Infinity,
+    y0 = Infinity,
+    y1 = -Infinity;
+  if (fit && fit.length) {
+    var _iterator14 = _createForOfIteratorHelper(fit),
+      _step14;
+    try {
+      for (_iterator14.s(); !(_step14 = _iterator14.n()).done;) {
+        var p = _step14.value;
+        if (!isFinite(p[0]) || !isFinite(p[1])) continue;
+        if (p[0] < x0) x0 = p[0];
+        if (p[0] > x1) x1 = p[0];
+        if (p[1] < y0) y0 = p[1];
+        if (p[1] > y1) y1 = p[1];
+      }
+    } catch (err) {
+      _iterator14.e(err);
+    } finally {
+      _iterator14.f();
+    }
+  }
+  if (!isFinite(x0) && B) {
+    x0 = B.x0;
+    x1 = B.x1;
+    y0 = B.y0;
+    y1 = B.y1;
+  }
+  if (!isFinite(x0)) {
+    x0 = 0;
+    x1 = 100;
+    y0 = -25;
+    y1 = 25;
+  }
+  var ext = Math.max(x1 - x0, y1 - y0, 40);
+  // запас на сдвиг: контур не упирается в край панели, и его видно, как он едет
+  var pm = Math.max(25, ext * 0.45);
+  var bx0 = x0 - pm,
+    bx1 = x1 + pm,
+    by0 = y0 - pm,
+    by1 = y1 + pm;
+  // Если сдвинули дальше запаса, рамка расширяется ступенями по 25 мм: иначе контур
+  // уходит за панель. Ступень нужна, чтобы кадр не «дышал» на каждом миллиметре —
+  // иначе масштаб менялся бы всё время и перетаскивание снова выглядело бы мёртвым.
+  var now = LAST && LAST.R && LAST.T ? LAST.R.pts.concat(LAST.T.pts) : null;
+  if (now && now.length) {
+    var nx0 = Infinity,
+      nx1 = -Infinity,
+      ny0 = Infinity,
+      ny1 = -Infinity;
+    var _iterator15 = _createForOfIteratorHelper(now),
+      _step15;
+    try {
+      for (_iterator15.s(); !(_step15 = _iterator15.n()).done;) {
+        var _p4 = _step15.value;
+        if (!isFinite(_p4[0]) || !isFinite(_p4[1])) continue;
+        if (_p4[0] < nx0) nx0 = _p4[0];
+        if (_p4[0] > nx1) nx1 = _p4[0];
+        if (_p4[1] < ny0) ny0 = _p4[1];
+        if (_p4[1] > ny1) ny1 = _p4[1];
+      }
+    } catch (err) {
+      _iterator15.e(err);
+    } finally {
+      _iterator15.f();
+    }
+    var q = 25,
+      qm = (v, ref) => Math.ceil(Math.abs(v - ref) / q) * q * Math.sign(v - ref);
+    if (isFinite(nx0) && nx0 < bx0) bx0 = bx0 + qm(nx0, bx0);
+    if (isFinite(nx1) && nx1 > bx1) bx1 = bx1 + qm(nx1, bx1);
+    if (isFinite(ny0) && ny0 < by0) by0 = by0 + qm(ny0, by0);
+    if (isFinite(ny1) && ny1 > by1) by1 = by1 + qm(ny1, by1);
+  }
+  return {
+    x0: bx0,
+    x1: bx1,
+    y0: by0,
+    y1: by1
+  };
+}
+
 /* Кадр 2D-вида: общая рамка для отрисовки и для зума колесом.
+   Кадр строится по контурам обеих башен, а не по целой заготовке: в блоке
+   400 × 250 нервюра 40 мм превращалась в точку и сдвиг по Y был не виден совсем.
+   Обе панели берут один и тот же кадр, поэтому взаимное положение башен по высоте
+   честное — так же, как в симуляции и в виде «Синхронизация».
+   Заготовка по-прежнему рисуется пунктиром и может выйти за кадр.
    Масштаб «вписать» считается один раз, зум пользователя — сверху. */
 function cut2dFrame(w, h, B) {
-  var xmn = Math.min(B.x0, -Math.max(0, +CFG.lead || 0) - 6),
-    xmx = B.x1;
-  var ymn = B.y0,
-    ymx = B.y1;
-  var pad = 30,
+  var fb = CUT_FRAME_LOCK || cutFitBox(B);
+  var xmn = Math.min(fb.x0, B ? B.x0 : fb.x0),
+    xmx = fb.x1;
+  var ymn = fb.y0,
+    ymx = fb.y1;
+  var pad = 14,
     half = w / 2;
   var yk = 1; // «×3 по Y» убрано: торец всегда в натуральную величину, как на сетке 10 мм
   var s0 = Math.min((half - 2 * pad) / Math.max(xmx - xmn, 1), (h - 2 * pad) / (Math.max(ymx - ymn, 1) * yk));
@@ -4684,20 +4797,20 @@ function syncHit(w, h, mx, my, st) {
       bx1 = -Infinity,
       by0 = Infinity,
       by1 = -Infinity;
-    var _iterator14 = _createForOfIteratorHelper(scr),
-      _step14;
+    var _iterator16 = _createForOfIteratorHelper(scr),
+      _step16;
     try {
-      for (_iterator14.s(); !(_step14 = _iterator14.n()).done;) {
-        var p = _step14.value;
+      for (_iterator16.s(); !(_step16 = _iterator16.n()).done;) {
+        var p = _step16.value;
         if (p[0] < bx0) bx0 = p[0];
         if (p[0] > bx1) bx1 = p[0];
         if (p[1] < by0) by0 = p[1];
         if (p[1] > by1) by1 = p[1];
       }
     } catch (err) {
-      _iterator14.e(err);
+      _iterator16.e(err);
     } finally {
-      _iterator14.f();
+      _iterator16.f();
     }
     if (mx < bx0 - t || mx > bx1 + t || my < by0 - t || my > by1 + t) continue;
     var dmin = Infinity;
@@ -4736,10 +4849,12 @@ function renderCutSync(ctx, w, h) {
   var B = C.block;
   // Кадр строим по САМИМ КОНТУРАМ, а не по всей заготовке: блок длиной 800 мм
   // рядом с нервюрой 40 мм делал контуры крошечными, и сдвиг на 40 мм выглядел
-  // как «стоят на месте». Заготовка по-прежнему рисуется пунктиром, но масштаб
-  // задают торцы — именно их и надо сравнивать.
-  var all = C.R.pts.concat(C.T.pts);
-  var m0 = makeMap(all, w, h, 44);
+  // как «стоят на месте».
+  // И берём точки БЕЗ сдвига башни: иначе кадр пересчитывается на каждом движении
+  // мыши, масштаб подстраивается, и контур на экране остаётся на месте — выглядит
+  // так, будто перетаскивание не работает. Большой отступ оставляет место, куда ехать.
+  var fb = cutFitBox(B);
+  var m0 = makeMap([[fb.x0, fb.y0], [fb.x1, fb.y1]], w, h, Math.max(10, Math.min(w, h) * 0.06));
   VSYNC_M0 = m0; // базовая проекция — для зума вокруг курсора
   var z = Math.max(0.2, +VSYNC.zoom || 1); // свой зум и сдвиг — 3D/2D не трогаем
   var map = {
@@ -4761,11 +4876,11 @@ function renderCutSync(ctx, w, h) {
 
   // полости лонжерона на каждом торце (если лонжерон включён)
   if (C.spar) {
-    var _iterator15 = _createForOfIteratorHelper(C.spar),
-      _step15;
+    var _iterator17 = _createForOfIteratorHelper(C.spar),
+      _step17;
     try {
-      for (_iterator15.s(); !(_step15 = _iterator15.n()).done;) {
-        var cv = _step15.value;
+      for (_iterator17.s(); !(_step17 = _iterator17.n()).done;) {
+        var cv = _step17.value;
         if (cv.sR && cv.sR.pts) drawContour(ctx, map, cv.sR.pts, {
           color: "#2f6f57",
           lw: 1
@@ -4776,9 +4891,9 @@ function renderCutSync(ctx, w, h) {
         });
       }
     } catch (err) {
-      _iterator15.e(err);
+      _iterator17.e(err);
     } finally {
-      _iterator15.f();
+      _iterator17.f();
     }
   }
 
@@ -4895,10 +5010,10 @@ function renderCutSync(ctx, w, h) {
   ctx.fillText("пройдено " + pr + " %", w - 8, 6);
   // Тянешь контур прямо в этом виде — сразу видно, какая башня поехала и на сколько.
   if (DRAG2D) {
-    var v = +CFG[DRAG2D.key].x || 0;
+    var c = CFG[DRAG2D.key] || {};
     ctx.textAlign = "center";
     ctx.fillStyle = "#ffd479";
-    ctx.fillText((DRAG2D.key === "root" ? "тянешь левую" : "тянешь правую") + " · сдвиг X = " + Math.round(v * 10) / 10 + " мм", w / 2, h - 10);
+    ctx.fillText((DRAG2D.key === "root" ? "тянешь левую" : "тянешь правую") + " · сдвиг X = " + Math.round((+c.x || 0) * 10) / 10 + " мм" + " · Y = " + Math.round((+c.y || 0) * 10) / 10 + " мм", w / 2, h - 10);
   }
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
@@ -5056,11 +5171,11 @@ function renderCut2D(ctx, w, h) {
       ctx.strokeStyle = "#ffb454";
       ctx.lineWidth = 1.6;
       ctx.setLineDash([5, 4]);
-      var _iterator16 = _createForOfIteratorHelper(pn.spar),
-        _step16;
+      var _iterator18 = _createForOfIteratorHelper(pn.spar),
+        _step18;
       try {
-        for (_iterator16.s(); !(_step16 = _iterator16.n()).done;) {
-          var sp = _step16.value;
+        for (_iterator18.s(); !(_step18 = _iterator18.n()).done;) {
+          var sp = _step18.value;
           ctx.beginPath();
           for (var _i25 = 0; _i25 < sp.pts.length; _i25++) {
             var _q4 = sp.pts[_i25];
@@ -5070,9 +5185,9 @@ function renderCut2D(ctx, w, h) {
           ctx.stroke();
         }
       } catch (err) {
-        _iterator16.e(err);
+        _iterator18.e(err);
       } finally {
-        _iterator16.f();
+        _iterator18.f();
       }
       ctx.setLineDash([]);
     }
@@ -5135,8 +5250,8 @@ function renderCut2D(ctx, w, h) {
   // Пока тянешь — крупно показываем, куда встал сдвиг: иначе на мелком
   // масштабе скачок 10 мм легко не заметить и кажется, что контур не движется.
   if (DRAG2D) {
-    var v = +CFG[DRAG2D.key].x || 0;
-    var txt = (DRAG2D.key === "root" ? "левая башня" : "правая башня") + " · сдвиг X = " + Math.round(v * 10) / 10 + " мм";
+    var c = CFG[DRAG2D.key] || {};
+    var txt = (DRAG2D.key === "root" ? "левая башня" : "правая башня") + " · X = " + Math.round((+c.x || 0) * 10) / 10 + " · Y = " + Math.round((+c.y || 0) * 10) / 10 + " мм";
     ctx.save();
     ctx.font = "13px Arial";
     ctx.textAlign = "center";
@@ -5167,11 +5282,11 @@ function parseGcode(text) {
     Ry: new RegExp("(?:^|\\s)[" + cand(AX.Ry, "V") + "]\\s*(-?\\d+(?:\\.\\d+)?)", "i")
   };
   var pts = [];
-  var _iterator17 = _createForOfIteratorHelper(text.split(/\r?\n/)),
-    _step17;
+  var _iterator19 = _createForOfIteratorHelper(text.split(/\r?\n/)),
+    _step19;
   try {
-    for (_iterator17.s(); !(_step17 = _iterator17.n()).done;) {
-      var raw = _step17.value;
+    for (_iterator19.s(); !(_step19 = _iterator19.n()).done;) {
+      var raw = _step19.value;
       var line = raw.replace(/\([^)]*\)/g, "").replace(/^\s*N\d+\s*/i, "").trim();
       if (!line) continue;
       var g = line.match(/^G0*([01])\b/i);
@@ -5199,9 +5314,9 @@ function parseGcode(text) {
       });
     }
   } catch (err) {
-    _iterator17.e(err);
+    _iterator19.e(err);
   } finally {
-    _iterator17.f();
+    _iterator19.f();
   }
   return pts.length > 2 ? pts : null;
 }
@@ -5227,17 +5342,17 @@ function buildGcode() {
   L.push("G21");
   L.push("G90");
   L.push("G94");
-  var _iterator18 = _createForOfIteratorHelper(String(CFG.head || "").split(/\r?\n/)),
-    _step18;
+  var _iterator20 = _createForOfIteratorHelper(String(CFG.head || "").split(/\r?\n/)),
+    _step20;
   try {
-    for (_iterator18.s(); !(_step18 = _iterator18.n()).done;) {
-      var ln = _step18.value;
+    for (_iterator20.s(); !(_step20 = _iterator20.n()).done;) {
+      var ln = _step20.value;
       if (ln.trim()) L.push(ln.trim());
     }
   } catch (err) {
-    _iterator18.e(err);
+    _iterator20.e(err);
   } finally {
-    _iterator18.f();
+    _iterator20.f();
   }
   var AXPOS = {
     X: 0,
@@ -5283,17 +5398,17 @@ function buildGcode() {
     L.push(move(op.rapid ? "G0" : "G1", op.L, op.R, i === firstCut ? C.feed : null));
   }
   if (heated && CFG.off) L.push(CFG.off);
-  var _iterator19 = _createForOfIteratorHelper(String(CFG.foot || "").split(/\r?\n/)),
-    _step19;
+  var _iterator21 = _createForOfIteratorHelper(String(CFG.foot || "").split(/\r?\n/)),
+    _step21;
   try {
-    for (_iterator19.s(); !(_step19 = _iterator19.n()).done;) {
-      var _ln = _step19.value;
+    for (_iterator21.s(); !(_step21 = _iterator21.n()).done;) {
+      var _ln = _step21.value;
       if (_ln.trim()) L.push(_ln.trim());
     }
   } catch (err) {
-    _iterator19.e(err);
+    _iterator21.e(err);
   } finally {
-    _iterator19.f();
+    _iterator21.f();
   }
   L.push("M30");
   var out = L;
@@ -5590,11 +5705,11 @@ function refreshCut(rebuild) {
   if (Math.abs(CFG.root.chord - CFG.tip.chord) < 0.5 && Math.abs(CFG.root.x - CFG.tip.x) < 0.01 && Math.abs(CFG.root.y - CFG.tip.y) < 0.01 && Math.abs(CFG.root.rot - CFG.tip.rot) < 0.01) w.push("Оба торца одинаковые — получится прямая призма.");
   if (CFG.tip.chord > CFG.root.chord) w.push("Хорда конца больше корня — проверь, так ли задумано.");
   if (CFG.spar && CFG.spar.on && LAST.spar) {
-    var _iterator20 = _createForOfIteratorHelper(LAST.spar),
-      _step20;
+    var _iterator22 = _createForOfIteratorHelper(LAST.spar),
+      _step22;
     try {
-      for (_iterator20.s(); !(_step20 = _iterator20.n()).done;) {
-        var cv = _step20.value;
+      for (_iterator22.s(); !(_step22 = _iterator22.n()).done;) {
+        var cv = _step22.value;
         var okR = cv.sR.pts.every(p => pointInPoly(p, LAST.R.pts));
         var okT = cv.sT.pts.every(p => pointInPoly(p, LAST.T.pts));
         if (!okR || !okT) {
@@ -5604,9 +5719,9 @@ function refreshCut(rebuild) {
         }
       }
     } catch (err) {
-      _iterator20.e(err);
+      _iterator22.e(err);
     } finally {
-      _iterator20.f();
+      _iterator22.f();
     }
   }
   $("#cWarn").textContent = w.join(" ");
@@ -5756,11 +5871,11 @@ function renderSparPreview() {
     // полости лонжерона
     var dimY = cy + rowH * 0.28;
     var dimStep = defs.length > 1 ? 12 : 0;
-    var _iterator21 = _createForOfIteratorHelper(defs),
-      _step21;
+    var _iterator23 = _createForOfIteratorHelper(defs),
+      _step23;
     try {
       var _loop9 = function _loop9() {
-        var def = _step21.value;
+        var def = _step23.value;
         var e = def[row.key] && typeof def[row.key] === "object" ? def[row.key] : {
           x: 0.3 * ch,
           y: 0
@@ -5866,13 +5981,13 @@ function renderSparPreview() {
         ctx.fillText((def.label ? def.label + " " : "") + "X " + ex.toFixed(0) + " (" + (ex / ch * 100).toFixed(0) + "%)", (padL + sx) / 2 - 16, Math.min(my + 10, h - 3));
         dimY += dimStep;
       };
-      for (_iterator21.s(); !(_step21 = _iterator21.n()).done;) {
+      for (_iterator23.s(); !(_step23 = _iterator23.n()).done;) {
         _loop9();
       }
     } catch (err) {
-      _iterator21.e(err);
+      _iterator23.e(err);
     } finally {
-      _iterator21.f();
+      _iterator23.f();
     }
     var sizes = defs.map(d => d.kind === "box" ? "▭" + (+d.w || 24) + "×" + (+d.h || 12) : "Ø" + (+d.d || 16)).join("  ");
     ctx.fillStyle = "#8b9bb4";
@@ -6411,20 +6526,20 @@ function rawChordMM(raw) {
   if (!raw || raw.length < 4) return null;
   var xmin = Infinity,
     xmax = -Infinity;
-  var _iterator22 = _createForOfIteratorHelper(raw),
-    _step22;
+  var _iterator24 = _createForOfIteratorHelper(raw),
+    _step24;
   try {
-    for (_iterator22.s(); !(_step22 = _iterator22.n()).done;) {
-      var q = _step22.value;
+    for (_iterator24.s(); !(_step24 = _iterator24.n()).done;) {
+      var q = _step24.value;
       if (q && isFinite(q[0])) {
         if (q[0] < xmin) xmin = q[0];
         if (q[0] > xmax) xmax = q[0];
       }
     }
   } catch (err) {
-    _iterator22.e(err);
+    _iterator24.e(err);
   } finally {
-    _iterator22.f();
+    _iterator24.f();
   }
   var ch = xmax - xmin;
   if (!isFinite(ch) || ch < 10 || ch > 20000) return null;
@@ -6820,19 +6935,19 @@ function downloadBlob(name, blob) {
 function datText(name, pts, chord) {
   var ch = +chord || 1;
   var L = [name];
-  var _iterator23 = _createForOfIteratorHelper(pts),
-    _step23;
+  var _iterator25 = _createForOfIteratorHelper(pts),
+    _step25;
   try {
-    for (_iterator23.s(); !(_step23 = _iterator23.n()).done;) {
-      var _step23$value = _slicedToArray(_step23.value, 2),
-        x = _step23$value[0],
-        y = _step23$value[1];
+    for (_iterator25.s(); !(_step25 = _iterator25.n()).done;) {
+      var _step25$value = _slicedToArray(_step25.value, 2),
+        x = _step25$value[0],
+        y = _step25$value[1];
       L.push((x * ch).toFixed(6) + "  " + (y * ch).toFixed(6));
     }
   } catch (err) {
-    _iterator23.e(err);
+    _iterator25.e(err);
   } finally {
-    _iterator23.f();
+    _iterator25.f();
   }
   return L.join("\n") + "\n";
 }
@@ -6891,22 +7006,22 @@ function dxfText(name, pts, chord) {
     xmax = -Infinity,
     ymin = Infinity,
     ymax = -Infinity;
-  var _iterator24 = _createForOfIteratorHelper(P),
-    _step24;
+  var _iterator26 = _createForOfIteratorHelper(P),
+    _step26;
   try {
-    for (_iterator24.s(); !(_step24 = _iterator24.n()).done;) {
-      var _step24$value = _slicedToArray(_step24.value, 2),
-        x = _step24$value[0],
-        y = _step24$value[1];
+    for (_iterator26.s(); !(_step26 = _iterator26.n()).done;) {
+      var _step26$value = _slicedToArray(_step26.value, 2),
+        x = _step26$value[0],
+        y = _step26$value[1];
       if (x < xmin) xmin = x;
       if (x > xmax) xmax = x;
       if (y < ymin) ymin = y;
       if (y > ymax) ymax = y;
     }
   } catch (err) {
-    _iterator24.e(err);
+    _iterator26.e(err);
   } finally {
-    _iterator24.f();
+    _iterator26.f();
   }
   var f = v => (Math.round(v * 1e6) / 1e6).toFixed(6);
   var clean = t => String(t || "AIRFOIL").replace(/[^\wа-яА-Я .\-]+/gi, "").trim().toUpperCase().slice(0, 40) || "AIRFOIL";
@@ -7197,20 +7312,20 @@ function dxfText(name, pts, chord) {
   g(90, String(P.length));
   g(70, "1");
   g(43, f(0));
-  var _iterator25 = _createForOfIteratorHelper(P),
-    _step25;
+  var _iterator27 = _createForOfIteratorHelper(P),
+    _step27;
   try {
-    for (_iterator25.s(); !(_step25 = _iterator25.n()).done;) {
-      var _step25$value = _slicedToArray(_step25.value, 2),
-        _x3 = _step25$value[0],
-        _y2 = _step25$value[1];
+    for (_iterator27.s(); !(_step27 = _iterator27.n()).done;) {
+      var _step27$value = _slicedToArray(_step27.value, 2),
+        _x3 = _step27$value[0],
+        _y2 = _step27$value[1];
       g(10, f(_x3));
       g(20, f(_y2));
     }
   } catch (err) {
-    _iterator25.e(err);
+    _iterator27.e(err);
   } finally {
-    _iterator25.f();
+    _iterator27.f();
   }
   g(0, "ENDSEC");
 
@@ -7348,17 +7463,17 @@ function dxfVertPath(vts, closed) {
     out.push([vts[i][0], vts[i][1]]);
     if (vts[i][2]) {
       var arc = dxfBulgePts([vts[i][0], vts[i][1]], [vts[i + 1][0], vts[i + 1][1]], vts[i][2]);
-      var _iterator26 = _createForOfIteratorHelper(arc),
-        _step26;
+      var _iterator28 = _createForOfIteratorHelper(arc),
+        _step28;
       try {
-        for (_iterator26.s(); !(_step26 = _iterator26.n()).done;) {
-          var q = _step26.value;
+        for (_iterator28.s(); !(_step28 = _iterator28.n()).done;) {
+          var q = _step28.value;
           out.push(q);
         }
       } catch (err) {
-        _iterator26.e(err);
+        _iterator28.e(err);
       } finally {
-        _iterator26.f();
+        _iterator28.f();
       }
     }
   }
@@ -7368,17 +7483,17 @@ function dxfVertPath(vts, closed) {
   if (closed && vts.length > 2) {
     if (L[2]) {
       var _arc = dxfBulgePts([L[0], L[1]], [vts[0][0], vts[0][1]], L[2]);
-      var _iterator27 = _createForOfIteratorHelper(_arc),
-        _step27;
+      var _iterator29 = _createForOfIteratorHelper(_arc),
+        _step29;
       try {
-        for (_iterator27.s(); !(_step27 = _iterator27.n()).done;) {
-          var _q5 = _step27.value;
+        for (_iterator29.s(); !(_step29 = _iterator29.n()).done;) {
+          var _q5 = _step29.value;
           out.push(_q5);
         }
       } catch (err) {
-        _iterator27.e(err);
+        _iterator29.e(err);
       } finally {
-        _iterator27.f();
+        _iterator29.f();
       }
     }
     out.push([vts[0][0], vts[0][1]]);
@@ -7424,13 +7539,13 @@ function dxfEntity(pairs, i) {
   }
   if (type === "LWPOLYLINE") {
     var vts = [];
-    var _iterator28 = _createForOfIteratorHelper(data),
-      _step28;
+    var _iterator30 = _createForOfIteratorHelper(data),
+      _step30;
     try {
-      for (_iterator28.s(); !(_step28 = _iterator28.n()).done;) {
-        var _step28$value = _slicedToArray(_step28.value, 2),
-          c = _step28$value[0],
-          v = _step28$value[1];
+      for (_iterator30.s(); !(_step30 = _iterator30.n()).done;) {
+        var _step30$value = _slicedToArray(_step30.value, 2),
+          c = _step30$value[0],
+          v = _step30$value[1];
         var x = parseFloat(v);
         if (c === 10) {
           if (isFinite(x)) vts.push([x, 0, 0]);
@@ -7441,9 +7556,9 @@ function dxfEntity(pairs, i) {
         }
       }
     } catch (err) {
-      _iterator28.e(err);
+      _iterator30.e(err);
     } finally {
-      _iterator28.f();
+      _iterator30.f();
     }
     var p = dxfVertPath(vts, closed);
     return {
@@ -7473,9 +7588,9 @@ function dxfEntity(pairs, i) {
       if (vx !== null && vy !== null) _vts.push([vx, vy, vb]);
       k = m;
     }
-    var _p4 = dxfVertPath(_vts, closed);
+    var _p5 = dxfVertPath(_vts, closed);
     return {
-      path: _p4.length >= 2 ? _p4 : null,
+      path: _p5.length >= 2 ? _p5 : null,
       next: k
     };
   }
@@ -7556,11 +7671,11 @@ function dxfJoin(paths, tol) {
       for (var dy = -1; dy <= 1; dy++) {
         var arr = ends.get(cx + dx + "," + (cy + dy));
         if (!arr) continue;
-        var _iterator29 = _createForOfIteratorHelper(arr),
-          _step29;
+        var _iterator31 = _createForOfIteratorHelper(arr),
+          _step31;
         try {
-          for (_iterator29.s(); !(_step29 = _iterator29.n()).done;) {
-            var e = _step29.value;
+          for (_iterator31.s(); !(_step31 = _iterator31.n()).done;) {
+            var e = _step31.value;
             if (e.i === self || busy[e.i]) continue;
             var p = live[e.i];
             var pt = e.s ? p[p.length - 1] : p[0];
@@ -7571,9 +7686,9 @@ function dxfJoin(paths, tol) {
             }
           }
         } catch (err) {
-          _iterator29.e(err);
+          _iterator31.e(err);
         } finally {
-          _iterator29.f();
+          _iterator31.f();
         }
       }
     }
@@ -7647,19 +7762,19 @@ function dxfTrimNeck(pts, diag) {
 /* Все пути файла → контур детали: внешний обвод по площади. */
 function dxfOutline(paths) {
   var clean = [];
-  var _iterator30 = _createForOfIteratorHelper(paths),
-    _step30;
+  var _iterator32 = _createForOfIteratorHelper(paths),
+    _step32;
   try {
-    for (_iterator30.s(); !(_step30 = _iterator30.n()).done;) {
-      var _p5 = _step30.value;
-      if (!_p5 || !Array.isArray(_p5)) continue;
-      var _q6 = _p5.filter(z => Array.isArray(z) && isFinite(z[0]) && isFinite(z[1]));
+    for (_iterator32.s(); !(_step32 = _iterator32.n()).done;) {
+      var _p6 = _step32.value;
+      if (!_p6 || !Array.isArray(_p6)) continue;
+      var _q6 = _p6.filter(z => Array.isArray(z) && isFinite(z[0]) && isFinite(z[1]));
       if (_q6.length >= 2) clean.push(_q6);
     }
   } catch (err) {
-    _iterator30.e(err);
+    _iterator32.e(err);
   } finally {
-    _iterator30.f();
+    _iterator32.f();
   }
   if (!clean.length) return null;
   var xmin = Infinity,
@@ -7668,30 +7783,30 @@ function dxfOutline(paths) {
     ymax = -Infinity;
   for (var _i39 = 0, _clean = clean; _i39 < _clean.length; _i39++) {
     var p = _clean[_i39];
-    var _iterator31 = _createForOfIteratorHelper(p),
-      _step31;
+    var _iterator33 = _createForOfIteratorHelper(p),
+      _step33;
     try {
-      for (_iterator31.s(); !(_step31 = _iterator31.n()).done;) {
-        var q = _step31.value;
+      for (_iterator33.s(); !(_step33 = _iterator33.n()).done;) {
+        var q = _step33.value;
         if (q[0] < xmin) xmin = q[0];
         if (q[0] > xmax) xmax = q[0];
         if (q[1] < ymin) ymin = q[1];
         if (q[1] > ymax) ymax = q[1];
       }
     } catch (err) {
-      _iterator31.e(err);
+      _iterator33.e(err);
     } finally {
-      _iterator31.f();
+      _iterator33.f();
     }
   }
   if (!isFinite(xmin + xmax + ymin + ymax)) return clean.sort((a, b) => b.length - a.length)[0] || null;
   var diag = Math.hypot(xmax - xmin, ymax - ymin) || 1;
   var best = null;
-  var _iterator32 = _createForOfIteratorHelper(dxfJoin(clean, diag * 0.0015)),
-    _step32;
+  var _iterator34 = _createForOfIteratorHelper(dxfJoin(clean, diag * 0.0015)),
+    _step34;
   try {
-    for (_iterator32.s(); !(_step32 = _iterator32.n()).done;) {
-      var ch = _step32.value;
+    for (_iterator34.s(); !(_step34 = _iterator34.n()).done;) {
+      var ch = _step34.value;
       // Перешеек не срезаем: если отверстие соединено с обводом прорезью, это и есть
       // готовый маршрут реза (обвод → прорезь → отверстие → обратно). Отдельные
       // замкнутые контуры остаются отдельными цепочками, их отсеивает площадь.
@@ -7704,9 +7819,9 @@ function dxfOutline(paths) {
       };
     }
   } catch (err) {
-    _iterator32.e(err);
+    _iterator34.e(err);
   } finally {
-    _iterator32.f();
+    _iterator34.f();
   }
   return best ? best.pts : null;
 }
@@ -7765,17 +7880,17 @@ function parseStep(text) {
   }
   var pts = [];
   if (best) {
-    var _iterator33 = _createForOfIteratorHelper(best),
-      _step33;
+    var _iterator35 = _createForOfIteratorHelper(best),
+      _step35;
     try {
-      for (_iterator33.s(); !(_step33 = _iterator33.n()).done;) {
-        var id = _step33.value;
+      for (_iterator35.s(); !(_step35 = _iterator35.n()).done;) {
+        var id = _step35.value;
         if (byId[id]) pts.push(byId[id]);
       }
     } catch (err) {
-      _iterator33.e(err);
+      _iterator35.e(err);
     } finally {
-      _iterator33.f();
+      _iterator35.f();
     }
   }
   if (pts.length < 4) pts = order.map(id => byId[id]);
@@ -7790,54 +7905,54 @@ function profileFromCad(raw) {
   var pts = (raw || []).filter(p => Array.isArray(p) && isFinite(p[0]) && isFinite(p[1]));
   if (pts.length < 4) return null;
   var cl = [];
-  var _iterator34 = _createForOfIteratorHelper(pts),
-    _step34;
+  var _iterator36 = _createForOfIteratorHelper(pts),
+    _step36;
   try {
-    for (_iterator34.s(); !(_step34 = _iterator34.n()).done;) {
-      var _q7 = _step34.value;
+    for (_iterator36.s(); !(_step36 = _iterator36.n()).done;) {
+      var _q7 = _step36.value;
       if (!cl.length || Math.hypot(_q7[0] - cl[cl.length - 1][0], _q7[1] - cl[cl.length - 1][1]) > 1e-9) cl.push(_q7);
     }
   } catch (err) {
-    _iterator34.e(err);
+    _iterator36.e(err);
   } finally {
-    _iterator34.f();
+    _iterator36.f();
   }
   if (cl.length > 3 && Math.hypot(cl[0][0] - cl[cl.length - 1][0], cl[0][1] - cl[cl.length - 1][1]) <= 1e-9) cl.pop();
   pts = cl;
   if (pts.length < 4) return null;
   var xmin = Infinity,
     xmax = -Infinity;
-  var _iterator35 = _createForOfIteratorHelper(pts),
-    _step35;
+  var _iterator37 = _createForOfIteratorHelper(pts),
+    _step37;
   try {
-    for (_iterator35.s(); !(_step35 = _iterator35.n()).done;) {
-      var _q8 = _step35.value;
+    for (_iterator37.s(); !(_step37 = _iterator37.n()).done;) {
+      var _q8 = _step37.value;
       if (_q8[0] < xmin) xmin = _q8[0];
       if (_q8[0] > xmax) xmax = _q8[0];
     }
   } catch (err) {
-    _iterator35.e(err);
+    _iterator37.e(err);
   } finally {
-    _iterator35.f();
+    _iterator37.f();
   }
   var chord = xmax - xmin;
   if (!(chord > 1e-9)) return null;
   var eps = chord * 1e-7;
   var xs = pts.map(q => q[0]).sort((a, b) => a - b);
   var uniq = [];
-  var _iterator36 = _createForOfIteratorHelper(xs),
-    _step36;
+  var _iterator38 = _createForOfIteratorHelper(xs),
+    _step38;
   try {
-    for (_iterator36.s(); !(_step36 = _iterator36.n()).done;) {
-      var _x5 = _step36.value;
+    for (_iterator38.s(); !(_step38 = _iterator38.n()).done;) {
+      var _x5 = _step38.value;
       if (!uniq.length || _x5 - uniq[uniq.length - 1] > eps) uniq.push(_x5);
     }
 
     /* верх и низ обвода на станции x: вертикальный луч по всем отрезкам */
   } catch (err) {
-    _iterator36.e(err);
+    _iterator38.e(err);
   } finally {
-    _iterator36.f();
+    _iterator38.f();
   }
   function edgeY(x) {
     var up = -Infinity,
@@ -7892,35 +8007,35 @@ function profileFromCad(raw) {
 function profilePoly(raw) {
   var pts = (raw || []).filter(p => Array.isArray(p) && isFinite(p[0]) && isFinite(p[1]));
   var cl = [];
-  var _iterator37 = _createForOfIteratorHelper(pts),
-    _step37;
+  var _iterator39 = _createForOfIteratorHelper(pts),
+    _step39;
   try {
-    for (_iterator37.s(); !(_step37 = _iterator37.n()).done;) {
-      var q = _step37.value;
+    for (_iterator39.s(); !(_step39 = _iterator39.n()).done;) {
+      var q = _step39.value;
       if (!cl.length || Math.hypot(q[0] - cl[cl.length - 1][0], q[1] - cl[cl.length - 1][1]) > 1e-9) cl.push(q);
     }
   } catch (err) {
-    _iterator37.e(err);
+    _iterator39.e(err);
   } finally {
-    _iterator37.f();
+    _iterator39.f();
   }
   if (cl.length > 3 && Math.hypot(cl[0][0] - cl[cl.length - 1][0], cl[0][1] - cl[cl.length - 1][1]) <= 1e-9) cl.pop();
   pts = cl;
   if (pts.length < 3) return null;
   var xmin = Infinity,
     xmax = -Infinity;
-  var _iterator38 = _createForOfIteratorHelper(pts),
-    _step38;
+  var _iterator40 = _createForOfIteratorHelper(pts),
+    _step40;
   try {
-    for (_iterator38.s(); !(_step38 = _iterator38.n()).done;) {
-      var _q9 = _step38.value;
+    for (_iterator40.s(); !(_step40 = _iterator40.n()).done;) {
+      var _q9 = _step40.value;
       if (_q9[0] < xmin) xmin = _q9[0];
       if (_q9[0] > xmax) xmax = _q9[0];
     }
   } catch (err) {
-    _iterator38.e(err);
+    _iterator40.e(err);
   } finally {
-    _iterator38.f();
+    _iterator40.f();
   }
   var chord = xmax - xmin;
   if (!(chord > 1e-9)) return null;
@@ -7928,20 +8043,20 @@ function profilePoly(raw) {
   // начало координат по Y — середина передней кромки (там, где x = xmin)
   var sy = 0,
     sn = 0;
-  var _iterator39 = _createForOfIteratorHelper(pts),
-    _step39;
+  var _iterator41 = _createForOfIteratorHelper(pts),
+    _step41;
   try {
-    for (_iterator39.s(); !(_step39 = _iterator39.n()).done;) {
-      var _q0 = _step39.value;
+    for (_iterator41.s(); !(_step41 = _iterator41.n()).done;) {
+      var _q0 = _step41.value;
       if (Math.abs(_q0[0] - xmin) <= eps) {
         sy += _q0[1];
         sn++;
       }
     }
   } catch (err) {
-    _iterator39.e(err);
+    _iterator41.e(err);
   } finally {
-    _iterator39.f();
+    _iterator41.f();
   }
   var y0 = sn ? sy / sn : pts[0][1];
   return pts.map(q => [(q[0] - xmin) / chord, (q[1] - y0) / chord]);
@@ -7994,18 +8109,18 @@ function ribContourMM(prof, chord) {
   var pts = cutOutline(prof && prof.pts).map(([x, y]) => [x * chord, y * chord]);
   var ymin = Infinity,
     ymax = -Infinity;
-  var _iterator40 = _createForOfIteratorHelper(pts),
-    _step40;
+  var _iterator42 = _createForOfIteratorHelper(pts),
+    _step42;
   try {
-    for (_iterator40.s(); !(_step40 = _iterator40.n()).done;) {
-      var p = _step40.value;
+    for (_iterator42.s(); !(_step42 = _iterator42.n()).done;) {
+      var p = _step42.value;
       if (p[1] < ymin) ymin = p[1];
       if (p[1] > ymax) ymax = p[1];
     }
   } catch (err) {
-    _iterator40.e(err);
+    _iterator42.e(err);
   } finally {
-    _iterator40.f();
+    _iterator42.f();
   }
   return {
     pts,
@@ -8024,11 +8139,11 @@ function ribY(prof, upper, fx, chord) {
    и привязка к обводу берутся те же, что уходят в рез. */
 function ribCutoutsMM(endKey, prof, chord) {
   var out = [];
-  var _iterator41 = _createForOfIteratorHelper(sparDefsResolved()),
-    _step41;
+  var _iterator43 = _createForOfIteratorHelper(sparDefsResolved()),
+    _step43;
   try {
-    for (_iterator41.s(); !(_step41 = _iterator41.n()).done;) {
-      var def = _step41.value;
+    for (_iterator43.s(); !(_step43 = _iterator43.n()).done;) {
+      var def = _step43.value;
       var src = def[endKey] && typeof def[endKey] === "object" ? def[endKey] : {
         x: 0.3 * chord,
         y: 0
@@ -8082,9 +8197,9 @@ function ribCutoutsMM(endKey, prof, chord) {
       }
     }
   } catch (err) {
-    _iterator41.e(err);
+    _iterator43.e(err);
   } finally {
-    _iterator41.f();
+    _iterator43.f();
   }
   return out;
 }
@@ -8180,19 +8295,19 @@ function ribSheetCanvas(e) {
   // вырезы лонжерона: штрихом, без подписей и размеров
   ctx.strokeStyle = "#111";
   ctx.lineWidth = 0.5 * P;
-  var _iterator42 = _createForOfIteratorHelper(cut),
-    _step42;
+  var _iterator44 = _createForOfIteratorHelper(cut),
+    _step44;
   try {
-    for (_iterator42.s(); !(_step42 = _iterator42.n()).done;) {
-      var c = _step42.value;
+    for (_iterator44.s(); !(_step44 = _iterator44.n()).done;) {
+      var c = _step44.value;
       dashPath(ctx, c.pts.map(p => [X(p[0]), Y(p[1])]), 2.6 * P, 1.4 * P, true);
     }
 
     // линейка 100 мм с шагом 10 — проверка масштаба после печати
   } catch (err) {
-    _iterator42.e(err);
+    _iterator44.e(err);
   } finally {
-    _iterator42.f();
+    _iterator44.f();
   }
   var barY = (topZone + ribH + 14) * P,
     barX = X(0),
@@ -8705,23 +8820,23 @@ function init() {
   })();
   $("#pSeed").onclick = () => {
     var n = 0;
-    var _iterator43 = _createForOfIteratorHelper(seedProfiles()),
-      _step43;
+    var _iterator45 = _createForOfIteratorHelper(seedProfiles()),
+      _step45;
     try {
       var _loop1 = function _loop1() {
-        var sp = _step43.value;
+        var sp = _step45.value;
         if (!S.profiles.some(p => p.name === sp.name)) {
           S.profiles.push(sp);
           n++;
         }
       };
-      for (_iterator43.s(); !(_step43 = _iterator43.n()).done;) {
+      for (_iterator45.s(); !(_step45 = _iterator45.n()).done;) {
         _loop1();
       }
     } catch (err) {
-      _iterator43.e(err);
+      _iterator45.e(err);
     } finally {
-      _iterator43.f();
+      _iterator45.f();
     }
     saveProfiles();
     renderProfileList();
@@ -9453,11 +9568,22 @@ function init() {
         // За пустое место — как раньше, сдвигаем вид.
         if (cut2dHit(side, r2.width, r2.height, mx, my, st, 12)) {
           var key = side === "L" ? "root" : "tip";
+          var pf2 = cut2dMap(side, r2.width, r2.height, st);
           move2d = {
             key,
             x0: e.clientX,
+            y0: e.clientY,
             cfg0: +CFG[key].x || 0,
-            s: cut2dMap(side, r2.width, r2.height, st).s || 1
+            cfg0y: +CFG[key].y || 0,
+            s: pf2.s || 1
+          };
+          // кадр заморожен, пока тянем — контур идёт за курсором 1:1.
+          // В lock кладём габарит (x0/x1/y0/y1): у кадра 2D поля называются xmn/xmx/ymn/ymx.
+          CUT_FRAME_LOCK = {
+            x0: pf2.F.xmn,
+            x1: pf2.F.xmx,
+            y0: pf2.F.ymn,
+            y1: pf2.F.ymx
           };
           DRAG2D = {
             key
@@ -9481,9 +9607,12 @@ function init() {
           move2d = {
             key: _key,
             x0: e.clientX,
+            y0: e.clientY,
             cfg0: +CFG[_key].x || 0,
+            cfg0y: +CFG[_key].y || 0,
             s: VSYNC_MAP && VSYNC_MAP.s || 1
           };
+          CUT_FRAME_LOCK = cutFitBox(LAST && LAST.block); // кадр заморожен на время перетаскивания
           DRAG2D = {
             key: _key
           };
@@ -9501,12 +9630,12 @@ function init() {
         myp = e.clientY - rect.top;
       hoverPanel = mxp > rect.width / 2 ? 1 : 0;
       if (!drag) {
-        // над контуром в «Торцах 2D» — курсор «тянуть влево/вправо»
+        // над контуром в «Торцах 2D» курсор «тянуть»: двигать можно и влево/вправо, и вверх/вниз
         if (VDRAW === "2d" && LAST) {
           var side = mxp > rect.width / 2 ? "R" : "L";
-          cv.style.cursor = cut2dHit(side, rect.width, rect.height, mxp, myp, simState(), 12) ? "ew-resize" : "";
+          cv.style.cursor = cut2dHit(side, rect.width, rect.height, mxp, myp, simState(), 12) ? "move" : "";
         } else if (VDRAW === "sync" && LAST) {
-          cv.style.cursor = syncHit(rect.width, rect.height, mxp, myp, simState()) ? "ew-resize" : "";
+          cv.style.cursor = syncHit(rect.width, rect.height, mxp, myp, simState()) ? "move" : "";
         } else if (cv.style.cursor) cv.style.cursor = "";
         return;
       }
@@ -9524,21 +9653,37 @@ function init() {
         VSYNC.px = clamp(VSYNC.px + dx, -cv.clientWidth * 2, cv.clientWidth * 2);
         VSYNC.py = clamp(VSYNC.py + dy, -cv.clientHeight * 2, cv.clientHeight * 2);
       } else if (drag === "move2d" && move2d) {
-        // Профиль едет влево/вправо, «Сдвиг X» прилипает к сетке 10 мм (Alt — по 1 мм).
-        // Новый сдвиг считается от начала перетаскивания, а не от прошлого кадра.
+        // Профиль едет и влево/вправо (Сдвиг X), и вверх/вниз (Сдвиг Y).
+        // Оба сдвига прилипают к сетке 10 мм (Alt — по 1 мм) и считаются от начала
+        // перетаскивания, а не от прошлого кадра.
         var step = e.altKey ? 1 : 10;
-        var dmm = (e.clientX - move2d.x0) / (move2d.s || 1);
-        var pos = CFG.faceOff + move2d.cfg0 + dmm;
-        var nx = Math.round((Math.round(pos / step) * step - CFG.faceOff) * 10) / 10;
-        var id = move2d.key === "root" ? "#cRootX" : "#cTeOff";
+        var s = move2d.s || 1;
+        var dmmX = (e.clientX - move2d.x0) / s;
+        var dmmY = -(e.clientY - move2d.y0) / s; // экранный Y растёт вниз, координата модели — вверх
+        var posX = CFG.faceOff + move2d.cfg0 + dmmX;
+        var nx = Math.round((Math.round(posX / step) * step - CFG.faceOff) * 10) / 10;
+        var ny = Math.round(Math.round((move2d.cfg0y + dmmY) / step) * step * 10) / 10;
+        var idX = move2d.key === "root" ? "#cRootX" : "#cTeOff";
+        var idY = move2d.key === "root" ? "#cRootY" : "#cTipY";
         DXF_MASTER = move2d.key; // тянули эту башню — она и ведущая
-        var el = $(id);
-        if (el && Math.abs((+el.value || 0) - nx) > 1e-9) {
-          el.value = nx;
+        var ex = $(idX),
+          ey = $(idY);
+        var changed = false;
+        if (ex && Math.abs((+ex.value || 0) - nx) > 1e-9) {
+          ex.value = nx;
+          changed = true;
+        }
+        if (ey && Math.abs((+ey.value || 0) - ny) > 1e-9) {
+          ey.value = ny;
+          changed = true;
+        }
+        if (changed) {
           // При синхронизации тянем обе башни сразу — иначе они разъедутся.
           if (CUT_SRC === "dxf" && dxfSyncOn()) {
-            var other = $(id === "#cRootX" ? "#cTeOff" : "#cRootX");
-            if (other) other.value = nx;
+            var oX = $(idX === "#cRootX" ? "#cTeOff" : "#cRootX");
+            var oY = $(idY === "#cRootY" ? "#cTipY" : "#cRootY");
+            if (oX) oX.value = nx;
+            if (oY) oY.value = ny;
           }
           $("#cGcode").value = "";
           $("#cGcodeInfo").textContent = "Параметры изменены — сформируй УП заново";
@@ -9555,6 +9700,7 @@ function init() {
     var endDrag = () => {
       drag = null;
       move2d = null;
+      CUT_FRAME_LOCK = null;
       if (DRAG2D) {
         DRAG2D = null;
         renderCut();
@@ -9644,21 +9790,21 @@ function fromCode() {
   $("#gMake").click();
 }
 function importFiles(files) {
-  var ok, bad, list, _iterator44, _step44, f, txt, base, p, raw, pts, ch, _raw, _pts, _ch, q, _t16, _t17;
+  var ok, bad, list, _iterator46, _step46, f, txt, base, p, raw, pts, ch, _raw, _pts, _ch, q, _t16, _t17;
   return _regeneratorAsync(function (_context1) {
     while (1) switch (_context1.p = _context1.n) {
       case 0:
         ok = 0, bad = 0;
         list = Array.from(files).filter(f => /\.(dat|txt|csv|dxf|step|stp)$/i.test(f.name));
-        _iterator44 = _createForOfIteratorHelper(list);
+        _iterator46 = _createForOfIteratorHelper(list);
         _context1.p = 1;
-        _iterator44.s();
+        _iterator46.s();
       case 2:
-        if ((_step44 = _iterator44.n()).done) {
+        if ((_step46 = _iterator46.n()).done) {
           _context1.n = 7;
           break;
         }
-        f = _step44.value;
+        f = _step46.value;
         _context1.p = 3;
         _context1.n = 4;
         return _awaitAsyncGenerator(_blobText(f));
@@ -9716,10 +9862,10 @@ function importFiles(files) {
       case 8:
         _context1.p = 8;
         _t17 = _context1.v;
-        _iterator44.e(_t17);
+        _iterator46.e(_t17);
       case 9:
         _context1.p = 9;
-        _iterator44.f();
+        _iterator46.f();
         return _context1.f(9);
       case 10:
         renderProfileList();
