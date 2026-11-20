@@ -572,8 +572,10 @@ table.pts tr:hover td{background:#151d29}
       </div>
       <div class="hint" id="cSimSrc">—</div>
       <div class="hint" id="vHint">Колесо мыши — зум · перетаскивание — сдвиг (в 3D — поворот, с Shift — сдвиг) ·
-        двойной щелчок — вернуть вид. В «Торцах 2D» профиль можно потянуть за контур влево и вправо: «Сдвиг X»
-        этого торца прилипает к сетке 10 мм (Alt — по 1 мм). Тянуть за пустое место или с Shift — сдвиг вида.
+        двойной щелчок — вернуть вид. В «Торцах 2D» профиль можно потянуть за тело или контур
+        влево-вправо: «Сдвиг X» этого торца прилипает к сетке 10 мм (Alt — по 1 мм), над профилем
+        показывается текущее значение. Тот же сдвиг работает в виде «Синхронизация» — там снизу видно
+        сдвиг башен по X и Y. Тянуть за пустое место или с Shift — сдвиг вида.
         Каждая башня (левая и правая) увеличивается отдельно — приближается только та, над которой стоит курсор.
         Сетка — 10 мм, размеры по краям — в миллиметрах.</div>
     </div>
@@ -871,11 +873,13 @@ table.pts tr:hover td{background:#151d29}
         считается отдельно.</p>
         <p><b>Синхронизация.</b> Галка «держать башни на одном контуре»: что загрузил в одну башню,
         встаёт и в другую — контур, размер, сдвиги X/Y и угол установки становятся общими, рез идёт
-        прямой призмой. В «Торцах 2D» при включённой галке перетаскивание любой башни двигает обе.
-        Выключено — у каждой башни свой контур, размер и положение, а кнопки «левая → правая» /
-        «правая → левая» переносят контур вручную. Галка запоминается между запусками. Если в
-        сохранении лежат два разных контура, при запуске она снимается — иначе показывала бы
-        «вместе», а контуры разные. Включи её сам — и левый контур встанет на обе башни.</p>
+        прямой призмой. В «Торцах 2D» и в виде «Синхронизация» при включённой галке перетаскивание
+        любой башни двигает обе. Выключено — у каждой башни свой контур, размер и положение, а кнопки
+        «левая → правая» / «правая → левая» переносят контур вручную. Галка запоминается между
+        запусками. Если в сохранении лежат два разных контура, при запуске она снимается — иначе
+        показывала бы «вместе», а контуры разные. Включи её сам — ведущей станет башня, которую
+        трогал последней: её контур, сдвиг и угол встанут на обе. В «Синхронизации» снизу видно
+        число сдвига башен по X и Y — после перетаскивания сразу понятно, сдвинулось или нет.</p>
         <p>Оба контура видно на холсте наложенными в натуральную величину: синяя линия — левая башня,
         оранжевая — правая; совпали — правая ложится синим пунктиром ровно на левую. Сетка 10 мм,
         подписи по краям зелёные, линия y = 0 — хорда.</p>
@@ -896,8 +900,10 @@ table.pts tr:hover td{background:#151d29}
         Режим <b>Торцы 2D</b> — вид на каждую башню отдельно: <b>левая</b> (корневая нервюра)
         и <b>правая</b> (концевая), с текущими координатами в мм и сеткой 10 мм —
         размер на экране совпадает с настоящим (растяжения по Y нет). Профиль можно
-        <b>потянуть за контур влево или вправо</b>: «Сдвиг X» этого торца меняется и прилипает
-        к сетке 10 мм (с зажатым <b>Alt</b> — по 1 мм). За пустое место или с Shift тянется вид.</p>
+        <b>потянуть за тело или контур влево-вправо</b>: «Сдвиг X» этого торца меняется
+        и прилипает к сетке 10 мм (с зажатым <b>Alt</b> — по 1 мм). За пустое место или с Shift
+        тянется вид. Тот же сдвиг работает и в виде <b>Синхронизация</b> — там сразу видно,
+        какая башня поехала и на сколько (числа сдвига X/Y внизу кадра).</p>
         <p>Режим <b>Синхронизация</b> — вид со стороны проволоки, вдоль её оси. Когда обе башни идут
         по одинаковым контурам, проволока в этом виде — точка: башни рисуются одним маркером
         (синяя и оранжевая половина). Как только контуры расходятся — появляется линия проволоки
@@ -1010,9 +1016,11 @@ const DXF = { root: null, tip: null };   // { name, pts, chord, file, auto }
    VSYNC_M0 — базовая проекция последнего кадра (для зума вокруг курсора). */
 let VSYNC = { zoom: 1, px: 0, py: 0 };
 let VSYNC_M0 = null;
+let VSYNC_MAP = null;                    // проекция вида «Синхронизация» — для перетаскивания
 let VIEW = { yaw: 142, pitch: 22, zoom: 1, px: 0, py: 0 };        // 3D: поворот, зум, сдвиг в пикселях
 // 2D «Торцы»: у каждой башни свой масштаб и сдвиг — приближается только тот торец, где курсор
 let VIEW2 = { L: { zoom: 1, px: 0, py: 0 }, R: { zoom: 1, px: 0, py: 0 } };
+let DRAG2D = null;                       // какая башня тянется сейчас — для подписи сдвига
 let LUTC = null;
 let edDrag = -1, edMap = null;
 const ED = { zoom:1, cx:null, cy:null, baseS:1, pan:null, preview:null };
@@ -4000,17 +4008,58 @@ function cut2dHit(side, w, h, mx, my, st, tol){
     if(y < by0) by0 = y; if(y > by1) by1 = y;
     return [x, y]; });
   if(mx < bx0 - t || mx > bx1 + t || my < by0 - t || my > by1 + t) return false;
-  const seg = (ax, ay, bx, by) => {
-    const dx = bx-ax, dy = by-ay;
-    const l2 = dx*dx + dy*dy || 1e-9;
-    const u = clamp(((mx-ax)*dx + (my-ay)*dy)/l2, 0, 1);
-    return Math.hypot(mx - (ax + dx*u), my - (ay + dy*u));
-  };
-  for(let i = 0; i < scr.length; i++){
-    const a = scr[i], b = scr[(i+1) % scr.length];
-    if(seg(a[0], a[1], b[0], b[1]) <= t) return true;
+  // Тянем сам профиль, а не только тонкую линию обвода: попадание в габарит
+  // контура уже считается захватом. Иначе на большом окне середина профиля
+  // далеко от линии, и вместо сдвига уезжает вид — а контур стоит на месте.
+  return true;
+}
+
+/* Точка внутри многоугольника (луч вправо). Нужна, чтобы в «Синхронизации»
+   схватить контур за тело, а не только за тонкую линию. */
+function ptInPoly(pts, x, y){
+  let inside = false;
+  for(let i = 0, j = pts.length - 1; i < pts.length; j = i++){
+    const xi = pts[i][0], yi = pts[i][1], xj = pts[j][0], yj = pts[j][1];
+    if(((yi > y) !== (yj > y)) &&
+       (x < (xj - xi) * (y - yi) / ((yj - yi) || 1e-9) + xi)) inside = !inside;
   }
-  return false;
+  return inside;
+}
+
+function segDist(ax, ay, bx, by, x, y){
+  const dx = bx - ax, dy = by - ay;
+  const l2 = dx*dx + dy*dy || 1e-9;
+  const u = clamp(((x - ax)*dx + (y - ay)*dy) / l2, 0, 1);
+  return Math.hypot(x - (ax + dx*u), y - (ay + dy*u));
+}
+
+/* Какая башня схвачена в виде «Синхронизация»: контуры лежат друг на друге,
+   поэтому берём ближайший к курсору. Возвращает "root" / "tip" / null. */
+function syncHit(w, h, mx, my, st){
+  if(!LAST || !VSYNC_MAP) return null;
+  const m = VSYNC_MAP, t = 14;
+  let best = null;
+  for(const [key, pts] of [["root", LAST.R.pts], ["tip", LAST.T.pts]]){
+    if(!pts || pts.length < 3) continue;
+    const scr = pts.map(q => [m.X(q[0]), m.Y(q[1])]);
+    let bx0 = Infinity, bx1 = -Infinity, by0 = Infinity, by1 = -Infinity;
+    for(const p of scr){
+      if(p[0] < bx0) bx0 = p[0]; if(p[0] > bx1) bx1 = p[0];
+      if(p[1] < by0) by0 = p[1]; if(p[1] > by1) by1 = p[1];
+    }
+    if(mx < bx0 - t || mx > bx1 + t || my < by0 - t || my > by1 + t) continue;
+    let dmin = Infinity;
+    for(let i = 0; i < scr.length; i++){
+      const a = scr[i], b = scr[(i+1) % scr.length];
+      dmin = Math.min(dmin, segDist(a[0], a[1], b[0], b[1], mx, my));
+    }
+    const inside = ptInPoly(scr, mx, my);
+    if(!inside && dmin > t) continue;
+    // Ближе обвод — тот контур и схвачен. Если меньший лежит внутри большего,
+    // середина меньшего всё равно ближе к его обводу, а не к чужому.
+    if(!best || dmin < best.dmin) best = { key, dmin };
+  }
+  return best ? best.key : null;
 }
 
 /* --- 2D вид торцов --- */
@@ -4035,6 +4084,7 @@ function renderCutSync(ctx, w, h){
     inv: (px, py) => m0.inv((px - w/2 - VSYNC.px)/z + w/2, (py - h/2 - VSYNC.py)/z + h/2)
   };
   drawGrid(ctx, map, w, h, 1);                     // сетка 10 мм, подписи зелёные 12 px
+  VSYNC_MAP = map;                                 // для перетаскивания контура прямо в этом виде
 
   // заготовка
   ctx.save();
@@ -4123,9 +4173,24 @@ function renderCutSync(ctx, w, h){
   ctx.fillText(sameCut ? "контуры совпадают — прямая призма"
     : (same ? "контуры одинаковые, но сдвинуты — не призма"
       : (CUT_SRC === "dxf" ? "контуры разные — рез по двум разным контурам" : "контуры разные — крыло с переменным профилем")), 8, 38);
+  // Числа сдвига — чтобы после перетаскивания было видно, что контуры
+  // действительно разъехались/сошлись, а не «стоят как были».
+  const dX = (+CFG.tip.x || 0) - (+CFG.root.x || 0);
+  const dY = (+CFG.tip.y || 0) - (+CFG.root.y || 0);
+  ctx.fillStyle = "#8b9bb4";
+  ctx.fillText("сдвиг башен: X " + (Math.round(dX * 10) / 10) + " мм · Y " +
+               (Math.round(dY * 10) / 10) + " мм", 8, 54);
   const pr = SIM.dur > 0 ? Math.round(100 * SIM.t / SIM.dur) : 0;
   ctx.fillStyle = "#8b9bb4"; ctx.textAlign = "right";
   ctx.fillText("пройдено " + pr + " %", w - 8, 6);
+  // Тянешь контур прямо в этом виде — сразу видно, какая башня поехала и на сколько.
+  if(DRAG2D){
+    const v = +CFG[DRAG2D.key].x || 0;
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#ffd479";
+    ctx.fillText((DRAG2D.key === "root" ? "тянешь левую" : "тянешь правую") +
+                 " · сдвиг X = " + (Math.round(v * 10) / 10) + " мм", w/2, h - 10);
+  }
   ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
 }
 
@@ -4280,6 +4345,23 @@ function renderCut2D(ctx, w, h){
 
     ctx.fillStyle = "#8b9bb4"; ctx.font = "11px Segoe UI";
     ctx.fillText(pn.title, 12 + (pn.cx > half ? half : 0), 18);
+    ctx.restore();
+  }
+  // Пока тянешь — крупно показываем, куда встал сдвиг: иначе на мелком
+  // масштабе скачок 10 мм легко не заметить и кажется, что контур не движется.
+  if(DRAG2D){
+    const v = +CFG[DRAG2D.key].x || 0;
+    const txt = (DRAG2D.key === "root" ? "левая башня" : "правая башня") +
+                " · сдвиг X = " + (Math.round(v * 10) / 10) + " мм";
+    ctx.save();
+    ctx.font = "13px Segoe UI"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    const tw = ctx.measureText(txt).width;
+    ctx.fillStyle = "rgba(15,19,26,0.88)";
+    ctx.fillRect(w/2 - tw/2 - 10, 5, tw + 20, 22);
+    ctx.strokeStyle = "#6b5330"; ctx.lineWidth = 1;
+    ctx.strokeRect(w/2 - tw/2 - 10, 5, tw + 20, 22);
+    ctx.fillStyle = "#ffd479";
+    ctx.fillText(txt, w/2, 16);
     ctx.restore();
   }
 }
@@ -5115,6 +5197,10 @@ function projOpen(o){
 
 const DXF_FILE = { root: "", tip: "" };   // имена последних загруженных файлов
 let DXF_LAST = "root";                   // куда загружали последним
+/* Какая башня — ведущая при включении синхронизации. Это та, которую
+   пользователь трогал последней: загрузил, сдвинул или поправил поле.
+   Иначе «сдвинул правую, нажал синхронизацию» откатывало бы правую назад. */
+let DXF_MASTER = "root";
 
 function saveDxf(){
   try{ localStorage.setItem(LS_DXF, JSON.stringify(DXF)); }catch(e){}
@@ -5182,14 +5268,21 @@ function dxfSyncOn(){
 }
 /* «Держать башни вместе» — это не только один контур, но и одно положение:
    сдвиг X/Y и угол установки у обеих башен общие, иначе прямой призмы не будет.
-   Ведущая башня — левая (корневая), как и при загрузке контура. */
-function dxfHoldTowers(){
+   Ведущая башня — та, которую пользователь трогал последней (DXF_MASTER):
+   сдвинул правую и включил синхронизацию — правая остаётся на месте, левая
+   подтягивается к ней. */
+function dxfHoldTowers(src){
   if(CUT_SRC !== "dxf" || !dxfSyncOn()) return;
-  const x = +$("#cRootX").value || 0;
-  const y = +$("#cRootY").value || 0;
-  const r = +$("#cRootRot").value || 0;
-  CFG.root.x = x; CFG.root.y = y; CFG.root.rot = r;
-  CFG.tip.x = x;  CFG.tip.y = y;  CFG.tip.rot = r;
+  src = (src === "tip") ? "tip" : "root";
+  const dst = src === "root" ? "tip" : "root";
+  const x = +$(src === "root" ? "#cRootX" : "#cTeOff").value || 0;
+  const y = +$(src === "root" ? "#cRootY" : "#cTipY").value || 0;
+  const r = +$(src === "root" ? "#cRootRot" : "#cTipRot").value || 0;
+  CFG[src].x = x; CFG[src].y = y; CFG[src].rot = r;
+  CFG[dst].x = x; CFG[dst].y = y; CFG[dst].rot = r;
+  $("#cRootX").value = x;
+  $("#cRootY").value = y;
+  $("#cRootRot").value = r;
   $("#cTeOff").value = x;
   $("#cTipY").value = y;
   $("#cTipRot").value = r;
@@ -5236,7 +5329,7 @@ function dxfSideInfo(key){
 function dxfChanged(msg){
   // «Держать вместе» — это один контур И одно положение. Даже если контур
   // только что загрузили, сдвиги и угол у башен должны совпасть.
-  if(dxfSyncOn()) dxfHoldTowers();
+  if(dxfSyncOn()) dxfHoldTowers(DXF_MASTER);
   fillCutSelects();
   const gc = $("#cGcode");
   if(gc) gc.value = "";
@@ -5277,6 +5370,7 @@ function dxfClear(key){
 function dxfSetChord(key, v){
   const d = DXF[key];
   if(!d) return;
+  DXF_MASTER = key;
   const ch = Math.max(1, Math.round((+v || 0) * 100) / 100);
   if(Math.abs(ch - (+d.chord || 0)) < 0.005) return;
   d.chord = ch; d.auto = false;
@@ -5318,6 +5412,7 @@ async function dxfLoadTo(key){
                 chord: ch || Math.max(1, +CFG[key].chord || 250),
                 file: f.name, auto: !!ch };
   DXF_LAST = key;
+  DXF_MASTER = key;                        // последняя загруженная башня — ведущая
   const keys = dxfSyncOn() ? ["root", "tip"] : [key];
   keys.forEach(k => {
     const old = DXF[k];
@@ -5440,7 +5535,8 @@ function applyCutWording(dxf){
     sh.innerHTML = dxf
       ? (dxfSyncOn()
           ? "Синхронизация включена — башни держатся вместе: <b>«Сдвиг X», «Сдвиг Y» и угол установки " +
-            "у них общие</b>, рез идёт прямой призмой. Потяни любую башню в «Торцах 2D» — поедут обе."
+            "у них общие</b>, рез идёт прямой призмой. Потяни любую башню в «Торцах 2D» или прямо " +
+            "в виде «Синхронизация» — поедут обе."
           : "Каждый «Сдвиг X» двигает <b>только свою башню</b> — свой контур и его размер. " +
             "Перекос по задней кромке = сдвиг X концевой − сдвиг X корневой: <b id=\"cSweepHint\">0</b> мм. " +
             "<b>0</b> — обе задние кромки на одной глубине, больше нуля — концевая уходит глубже в блок. " +
@@ -5474,7 +5570,7 @@ function setCutSrc(src){
   if(t) t.textContent = dxf ? "Пенорезка DXF" : "Заготовка и концы";
   // В DXF-окне с включённой синхронизацией башни — одна деталь: не даём им
   // разъехаться, даже если в профилях сдвиги были разные.
-  if(dxf && dxfSyncOn()) dxfHoldTowers();
+  if(dxf && dxfSyncOn()) dxfHoldTowers(DXF_MASTER);
   applyCutWording(dxf);
 }
 function switchTab(name){
@@ -6917,6 +7013,7 @@ function init(){
       const a = $(src), b = $(dst);
       if(!a || !b) continue;
       a.addEventListener("input", () => {
+        DXF_MASTER = (src === "#cRootX" || src === "#cRootY" || src === "#cRootRot") ? "root" : "tip";
         if(CUT_SRC !== "dxf" || !dxfSyncOn()) return;
         b.value = a.value;
         updSweepHint();
@@ -7039,15 +7136,21 @@ function init(){
   });
   if($("#dxfSync")) $("#dxfSync").onchange = () => {
     if(dxfSyncOn()){
-      dxfHoldTowers();                 // положение и угол — тоже как у левой башни
-      const src = DXF.root;
+      // Ведущая — та башня, которую трогали последней. Сдвинул правую и
+      // включил синхронизацию — правая остаётся, левая подтягивается к ней;
+      // её контур и положение не откатываются назад.
+      const srcKey = (DXF_MASTER === "tip" && DXF.tip) ? "tip" : "root";
+      const dstKey = srcKey === "root" ? "tip" : "root";
+      const src = DXF[srcKey];
+      dxfHoldTowers(srcKey);                     // положение и угол — как у ведущей
       if(!src){
-        dxfChanged("Синхронизация включена — загрузи контур в левую башню, он повторится на правой");
+        dxfChanged("Синхронизация включена — загрузи контур в любую башню, он повторится на другой");
       } else {
-        DXF.tip = { name: src.name, pts: src.pts, chord: src.chord, file: src.file, auto: src.auto,
-                    prevChord: (+DXF.tip && +DXF.tip.prevChord > 0) ? +DXF.tip.prevChord
-                                                                   : Math.max(1, +CFG.tip.chord || 0) };
-        DXF_FILE.tip = DXF_FILE.root || "";
+        const d = DXF[dstKey];
+        DXF[dstKey] = { name: src.name, pts: src.pts, chord: src.chord, file: src.file, auto: src.auto,
+                        prevChord: (d && +d.prevChord > 0) ? +d.prevChord
+                                                           : Math.max(1, +CFG[dstKey].chord || 0) };
+        DXF_FILE[dstKey] = DXF_FILE[srcKey] || "";
         dxfChanged("Синхронизация включена — обе башни на «" + src.name + "»");
       }
     } else {
@@ -7282,6 +7385,7 @@ function init(){
           const key = side === "L" ? "root" : "tip";
           move2d = { key, x0: e.clientX, cfg0: +CFG[key].x || 0,
                      s: cut2dMap(side, r2.width, r2.height, st).s || 1 };
+          DRAG2D = { key };
           grab(e, "move2d");
           return;
         }
@@ -7289,7 +7393,20 @@ function init(){
         grab(e, "pan2d");                                     // в 2D обычное перетаскивание тоже сдвигает
         return;
       }
-      if(VDRAW === "sync" && e.button === 0){                 // в «Синхронизации» тянется вид, а не станок
+      if(VDRAW === "sync" && e.button === 0){
+        // В «Синхронизации» контуры лежат друг на друге: схватил ближайший —
+        // он и поехал. Иначе кнопка «Синхронизация» только показывает, а
+        // поправить сдвиг в ней нельзя и кажется, что всё «стоит как было».
+        const r2 = cv.getBoundingClientRect();
+        const mx = e.clientX - r2.left, my = e.clientY - r2.top;
+        const key = syncHit(r2.width, r2.height, mx, my, simState());
+        if(key){
+          move2d = { key, x0: e.clientX, cfg0: +CFG[key].x || 0,
+                     s: (VSYNC_MAP && VSYNC_MAP.s) || 1 };
+          DRAG2D = { key };
+          grab(e, "move2d");
+          return;
+        }
         grab(e, "pansync");
         return;
       }
@@ -7304,6 +7421,9 @@ function init(){
         if(VDRAW === "2d" && LAST){
           const side = mxp > rect.width/2 ? "R" : "L";
           cv.style.cursor = cut2dHit(side, rect.width, rect.height, mxp, myp, simState(), 12)
+            ? "ew-resize" : "";
+        } else if(VDRAW === "sync" && LAST){
+          cv.style.cursor = syncHit(rect.width, rect.height, mxp, myp, simState())
             ? "ew-resize" : "";
         } else if(cv.style.cursor) cv.style.cursor = "";
         return;
@@ -7327,6 +7447,7 @@ function init(){
         const pos = CFG.faceOff + move2d.cfg0 + dmm;
         const nx = Math.round((Math.round(pos/step)*step - CFG.faceOff) * 10) / 10;
         const id = move2d.key === "root" ? "#cRootX" : "#cTeOff";
+        DXF_MASTER = move2d.key;           // тянули эту башню — она и ведущая
         const el = $(id);
         if(el && Math.abs((+el.value || 0) - nx) > 1e-9){
           el.value = nx;
@@ -7347,8 +7468,12 @@ function init(){
       }
       renderCut();
     });
-    cv.addEventListener("pointerup", () => { drag = null; move2d = null; });
-    cv.addEventListener("pointercancel", () => { drag = null; move2d = null; });
+    const endDrag = () => {
+      drag = null; move2d = null;
+      if(DRAG2D){ DRAG2D = null; renderCut(); }
+    };
+    cv.addEventListener("pointerup", endDrag);
+    cv.addEventListener("pointercancel", endDrag);
     cv.addEventListener("contextmenu", e => e.preventDefault());
     cv.addEventListener("dblclick", e => {
       const rect = cv.getBoundingClientRect();
