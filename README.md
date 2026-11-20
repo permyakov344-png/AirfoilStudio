@@ -33,6 +33,19 @@ X/Y на корневой стороне и A/B на концевой, — вы�
 
 ---
 
+## Готовые сборки (архивы)
+
+Не хочется разбираться с файлами в репозитории — скачайте архив и распакуйте:
+
+| Версия | Архив | Для чего |
+| --- | --- | --- |
+| Обычная | [AirfoilStudio-2026-11-20.zip](https://github.com/permyakov344-png/AirfoilStudio/releases/download/v1.0/AirfoilStudio-2026-11-20.zip) | Windows 7 и новее: `index.html`, `airfoil-base.js`, `README.md` |
+| Windows XP | [AirfoilStudio-XP-2026-11-20.zip](https://github.com/permyakov344-png/AirfoilStudio/releases/download/v1.0/AirfoilStudio-XP-2026-11-20.zip) | Windows XP: `AirfoilStudio-XP.html`, база профилей, Firefox 52 ESR, инструкция |
+
+Обе страницы релиза: [releases/tag/v1.0](https://github.com/permyakov344-png/AirfoilStudio/releases/tag/v1.0).
+
+---
+
 ## Скриншоты
 
 ### Профили
