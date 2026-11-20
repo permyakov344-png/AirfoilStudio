@@ -395,8 +395,8 @@ table.pts tr:hover td{background:#151d29}
           <input type="checkbox" id="dxfSync" checked> держать башни на одном контуре
         </label>
         <div class="hint" style="font-size:11px;line-height:1.45">Включено: что загрузил в одну башню, встаёт и в другую —
-          оба контура одинаковые, рез идёт прямой призмой. Выключено: башни живут отдельно, у каждой свой контур
-          и свой размер, а кнопки ниже переносят контур из одной башни в другую.</div>
+          контур, размер, сдвиги и угол общие, рез идёт прямой призмой. Выключено: башни живут отдельно,
+          у каждой свой контур, размер и положение, а кнопки ниже переносят контур из одной башни в другую.</div>
         <div class="row">
           <button id="dxfCopyTip" class="grow1" title="Взять контур левой башни и поставить его на правую">левая → правая</button>
           <button id="dxfCopyRoot" class="grow1" title="Взять контур правой башни и поставить его на левую">правая → левая</button>
@@ -870,8 +870,12 @@ table.pts tr:hover td{background:#151d29}
         Сторона не зависит от того, как контуры обойдены в файле: у обвода и у выреза она
         считается отдельно.</p>
         <p><b>Синхронизация.</b> Галка «держать башни на одном контуре»: что загрузил в одну башню,
-        встаёт и в другую — рез идёт прямой призмой. Выключено — у каждой башни свой контур и свой
-        размер, а кнопки «левая → правая» / «правая → левая» переносят контур вручную.</p>
+        встаёт и в другую — контур, размер, сдвиги X/Y и угол установки становятся общими, рез идёт
+        прямой призмой. В «Торцах 2D» при включённой галке перетаскивание любой башни двигает обе.
+        Выключено — у каждой башни свой контур, размер и положение, а кнопки «левая → правая» /
+        «правая → левая» переносят контур вручную. Галка запоминается между запусками. Если в
+        сохранении лежат два разных контура, при запуске она снимается — иначе показывала бы
+        «вместе», а контуры разные. Включи её сам — и левый контур встанет на обе башни.</p>
         <p>Оба контура видно на холсте наложенными в натуральную величину: синяя линия — левая башня,
         оранжевая — правая; совпали — правая ложится синим пунктиром ровно на левую. Сетка 10 мм,
         подписи по краям зелёные, линия y = 0 — хорда.</p>
@@ -1000,6 +1004,7 @@ let LAST = null;          // результат расчёта реза
    в «Профили» не попадают, в файл-базу не пишутся, индексами не хранятся —
    каждая башня просто знает свой контур (см. endProfile()). */
 const LS_DXF = "airfoilStudio.dxf.v1";
+const LS_DXFSYNC = "airfoilStudio.dxfSync.v1";   // «держать башни на одном контуре»
 const DXF = { root: null, tip: null };   // { name, pts, chord, file, auto }
 /* Вид «Синхронизация» в симуляции: свой зум и сдвиг, чтобы не трогать 3D/2D.
    VSYNC_M0 — базовая проекция последнего кадра (для зума вокруг курсора). */
@@ -4067,6 +4072,7 @@ function renderCutSync(ctx, w, h){
 
   // контуры: корень — синий, конец — оранжевый (при совпадении ложится пунктиром сверху)
   const same = dxfSameProfile();
+  const sameCut = dxfSameCut();
   drawContour(ctx, map, C.R.pts, { color: "#4ea1ff", lw: 2 });
   ctx.save();
   if(same) ctx.setLineDash([7, 5]);
@@ -4114,8 +4120,9 @@ function renderCutSync(ctx, w, h){
   ctx.fillStyle = same ? "#4ea1ff" : "#ffb347";
   ctx.fillText("ПРАВАЯ башня (A,B) — «" + (tp ? tp.name : "—") + "»", 8, 22);
   ctx.fillStyle = "#ffd479";
-  ctx.fillText(same ? "контуры совпадают — прямая призма"
-    : (CUT_SRC === "dxf" ? "контуры разные — рез по двум разным контурам" : "контуры разные — крыло с переменным профилем"), 8, 38);
+  ctx.fillText(sameCut ? "контуры совпадают — прямая призма"
+    : (same ? "контуры одинаковые, но сдвинуты — не призма"
+      : (CUT_SRC === "dxf" ? "контуры разные — рез по двум разным контурам" : "контуры разные — крыло с переменным профилем")), 8, 38);
   const pr = SIM.dur > 0 ? Math.round(100 * SIM.t / SIM.dur) : 0;
   ctx.fillStyle = "#8b9bb4"; ctx.textAlign = "right";
   ctx.fillText("пройдено " + pr + " %", w - 8, 6);
@@ -5112,6 +5119,20 @@ let DXF_LAST = "root";                   // куда загружали посл
 function saveDxf(){
   try{ localStorage.setItem(LS_DXF, JSON.stringify(DXF)); }catch(e){}
 }
+/* Галка «держать башни на одном контуре» тоже запоминается: иначе после
+   перезапуска она включалась бы сама и врала про независимые контуры. */
+function saveDxfSync(){
+  try{ localStorage.setItem(LS_DXFSYNC, dxfSyncOn() ? "1" : "0"); }catch(e){}
+}
+function loadDxfSync(){
+  const el = $("#dxfSync");
+  if(!el) return;
+  try{
+    const v = localStorage.getItem(LS_DXFSYNC);
+    if(v === "0") el.checked = false;
+    else if(v === "1") el.checked = true;
+  }catch(e){}
+}
 function loadDxf(){
   try{
     const raw = JSON.parse(localStorage.getItem(LS_DXF) || "null");
@@ -5159,6 +5180,21 @@ function dxfSyncOn(){
   const el = $("#dxfSync");
   return !!(el && el.checked);
 }
+/* «Держать башни вместе» — это не только один контур, но и одно положение:
+   сдвиг X/Y и угол установки у обеих башен общие, иначе прямой призмы не будет.
+   Ведущая башня — левая (корневая), как и при загрузке контура. */
+function dxfHoldTowers(){
+  if(CUT_SRC !== "dxf" || !dxfSyncOn()) return;
+  const x = +$("#cRootX").value || 0;
+  const y = +$("#cRootY").value || 0;
+  const r = +$("#cRootRot").value || 0;
+  CFG.root.x = x; CFG.root.y = y; CFG.root.rot = r;
+  CFG.tip.x = x;  CFG.tip.y = y;  CFG.tip.rot = r;
+  $("#cTeOff").value = x;
+  $("#cTipY").value = y;
+  $("#cTipRot").value = r;
+  updSweepHint();
+}
 function dxfSamePts(a, b){
   if(!a || !b || a.length !== b.length) return false;
   for(let i = 0; i < a.length; i++){
@@ -5173,6 +5209,19 @@ function dxfSameProfile(){
   if(r === t) return true;
   return r.name === t.name && dxfSamePts(r.pts, t.pts);
 }
+/* Совпадают ли два загруженных DXF по геометрии (без привязки к текущему окну). */
+function dxfSameLoaded(){
+  const a = DXF.root, b = DXF.tip;
+  return !!(a && b && a.pts && b.pts && dxfSamePts(a.pts, b.pts));
+}
+/* Для вида «Синхронизация»: совпадает ли не только контур, но и положение —
+   сдвиги, угол и размер. Только тогда рез действительно идёт прямой призмой. */
+function dxfSameCut(){
+  if(!dxfSameProfile()) return false;
+  const a = CFG.root, b = CFG.tip;
+  const eq = (u, v) => Math.abs((+u || 0) - (+v || 0)) < 0.01;
+  return eq(a.x, b.x) && eq(a.y, b.y) && eq(a.rot, b.rot) && eq(a.chord, b.chord);
+}
 /* Строка состояния одной башни: файл, имя контура, точек, размер. */
 function dxfSideInfo(key){
   const d = DXF[key], p = endProfile(key);
@@ -5185,6 +5234,9 @@ function dxfSideInfo(key){
 }
 /* Всё, что меняет контуры башен: пересобрать расчёт, сбросить УП, перерисовать. */
 function dxfChanged(msg){
+  // «Держать вместе» — это один контур И одно положение. Даже если контур
+  // только что загрузили, сдвиги и угол у башен должны совпасть.
+  if(dxfSyncOn()) dxfHoldTowers();
   fillCutSelects();
   const gc = $("#cGcode");
   if(gc) gc.value = "";
@@ -5309,11 +5361,15 @@ function renderDxf(){
   const c2 = $("#dxfCopyRoot"); if(c2) c2.disabled = !DXF.tip;
   const inf = $("#dxfInfo");
   if(inf){
+    const sameCut = (CUT_SRC === "dxf") ? dxfSameCut() : same;
     inf.innerHTML =
       "<b>Синхронизация:</b> " +
-      (same
-        ? "контуры совпадают — обе нервюры одинаковые, рез идёт прямой призмой."
-        : "контуры разные — у каждой башни свой контур и свой размер.") +
+      (sameCut
+        ? "контуры и положение совпадают — обе нервюры одинаковые, рез идёт прямой призмой."
+        : (same
+          ? "контур одинаковый, но сдвиги или угол разные — это не прямая призма. " +
+            "Включи «держать башни на одном контуре» или выровняй сдвиги."
+          : "контуры разные — у каждой башни свой контур и свой размер.")) +
       "<br><b>Ширина реза</b> уводится в отход: по внешнему обводу — наружу, по внутреннему " +
       "вырезу — в его сторону, в материал детали проволока не заходит." +
       "<br><b>Рез</b> — в этом же окне, ниже: заготовка, сдвиги торцов, параметры реза, " +
@@ -5382,10 +5438,13 @@ function applyCutWording(dxf){
   const sh = $("#cShiftHint");
   if(sh){
     sh.innerHTML = dxf
-      ? "Каждый «Сдвиг X» двигает <b>только свою башню</b> — свой контур и его размер. " +
-        "Перекос по задней кромке = сдвиг X концевой − сдвиг X корневой: <b id=\"cSweepHint\">0</b> мм. " +
-        "<b>0</b> — обе задние кромки на одной глубине, больше нуля — концевая уходит глубже в блок. " +
-        "Оба контура всегда стоят на концах заготовки."
+      ? (dxfSyncOn()
+          ? "Синхронизация включена — башни держатся вместе: <b>«Сдвиг X», «Сдвиг Y» и угол установки " +
+            "у них общие</b>, рез идёт прямой призмой. Потяни любую башню в «Торцах 2D» — поедут обе."
+          : "Каждый «Сдвиг X» двигает <b>только свою башню</b> — свой контур и его размер. " +
+            "Перекос по задней кромке = сдвиг X концевой − сдвиг X корневой: <b id=\"cSweepHint\">0</b> мм. " +
+            "<b>0</b> — обе задние кромки на одной глубине, больше нуля — концевая уходит глубже в блок. " +
+            "Оба контура всегда стоят на концах заготовки.")
       : "Каждый «Сдвиг X» двигает <b>только свою нервюру</b> — двигать крыло целиком можно полем " +
         "«от торца до ЗК». Стреловидность по ЗК = сдвиг X концевой − сдвиг X корневой: " +
         "<b id=\"cSweepHint\">0</b> мм. <b>0</b> — обе задние кромки на одной глубине (стреловидность " +
@@ -5413,6 +5472,9 @@ function setCutSrc(src){
   show("#cPts", !dxf);          show("#dxfPill", dxf);
   const t = $("#cutSrcTitle");
   if(t) t.textContent = dxf ? "Пенорезка DXF" : "Заготовка и концы";
+  // В DXF-окне с включённой синхронизацией башни — одна деталь: не даём им
+  // разъехаться, даже если в профилях сдвиги были разные.
+  if(dxf && dxfSyncOn()) dxfHoldTowers();
   applyCutWording(dxf);
 }
 function switchTab(name){
@@ -6848,6 +6910,19 @@ function init(){
     if($("#cSpan").value.trim() !== String(v)) $("#cSpan").value = v;
     refreshCut();
   });
+  // «Держать башни вместе» в DXF — это одна деталь: сдвиги и угол у башен общие.
+  // Меняешь любое из полей — второе повторяет значение, рез остаётся прямой призмой.
+  [["#cRootX","#cTeOff"], ["#cRootY","#cTipY"], ["#cRootRot","#cTipRot"]].forEach(pair => {
+    for(const [src, dst] of [[pair[0], pair[1]], [pair[1], pair[0]]]){
+      const a = $(src), b = $(dst);
+      if(!a || !b) continue;
+      a.addEventListener("input", () => {
+        if(CUT_SRC !== "dxf" || !dxfSyncOn()) return;
+        b.value = a.value;
+        updSweepHint();
+      });
+    }
+  });
   // «база» и «длина заготовки» независимы — ничего не подставляется одно в другое
   ["#cRootProf","#cTipProf","#cRootX","#cRootY","#cRootRot",
    "#cTipY","#cTipRot","#cTeOff","#cSpan","#cWireD","#cKerf","#cStep","#cFeed","#cLead",
@@ -6964,19 +7039,22 @@ function init(){
   });
   if($("#dxfSync")) $("#dxfSync").onchange = () => {
     if(dxfSyncOn()){
+      dxfHoldTowers();                 // положение и угол — тоже как у левой башни
       const src = DXF.root;
       if(!src){
         dxfChanged("Синхронизация включена — загрузи контур в левую башню, он повторится на правой");
-        return;
+      } else {
+        DXF.tip = { name: src.name, pts: src.pts, chord: src.chord, file: src.file, auto: src.auto,
+                    prevChord: (+DXF.tip && +DXF.tip.prevChord > 0) ? +DXF.tip.prevChord
+                                                                   : Math.max(1, +CFG.tip.chord || 0) };
+        DXF_FILE.tip = DXF_FILE.root || "";
+        dxfChanged("Синхронизация включена — обе башни на «" + src.name + "»");
       }
-      DXF.tip = { name: src.name, pts: src.pts, chord: src.chord, file: src.file, auto: src.auto,
-                  prevChord: (+DXF.tip && +DXF.tip.prevChord > 0) ? +DXF.tip.prevChord
-                                                                 : Math.max(1, +CFG.tip.chord || 0) };
-      DXF_FILE.tip = DXF_FILE.root || "";
-      dxfChanged("Синхронизация включена — обе башни на «" + src.name + "»");
     } else {
       dxfChanged("Синхронизация выключена — башни настраиваются отдельно");
     }
+    saveDxfSync();
+    applyCutWording(CUT_SRC === "dxf");
   };
   if($("#dxfCopyTip"))  $("#dxfCopyTip").onclick  = () => dxfCopy("root", "tip");
   if($("#dxfCopyRoot")) $("#dxfCopyRoot").onclick = () => dxfCopy("tip", "root");
@@ -7252,6 +7330,11 @@ function init(){
         const el = $(id);
         if(el && Math.abs((+el.value || 0) - nx) > 1e-9){
           el.value = nx;
+          // При синхронизации тянем обе башни сразу — иначе они разъедутся.
+          if(CUT_SRC === "dxf" && dxfSyncOn()){
+            const other = $(id === "#cRootX" ? "#cTeOff" : "#cRootX");
+            if(other) other.value = nx;
+          }
           $("#cGcode").value = "";
           $("#cGcodeInfo").textContent = "Параметры изменены — сформируй УП заново";
           refreshCut();
@@ -7301,6 +7384,15 @@ function init(){
   });
 
   loadDxf();                 // контуры DXF из прошлого раза — живут вне базы профилей
+  loadDxfSync();             // и галка «держать вместе» — какой её оставил пользователь
+  // Старые сохранения: контуры разные, а галка по умолчанию включена. Она врёт —
+  // снимаем, чтобы «независимо» соответствовало двум разным контурам. Включит
+  // сам — тогда левый контур встанет на обе башни (см. onchange ниже).
+  if(dxfSyncOn() && DXF.root && DXF.tip && !dxfSameLoaded()){
+    const el = $("#dxfSync");
+    if(el) el.checked = false;
+    saveDxfSync();
+  }
   syncFormFromCfg();
   SIM.speed = +$("#simSpeed").value || 1;
   renderProfileList();
