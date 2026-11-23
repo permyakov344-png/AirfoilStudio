@@ -1,5 +1,5 @@
 ﻿Airfoil Studio — состояние архива разработки
-Обновлено: 20.11.2026 11:58
+Обновлено: 23.11.2026 07:15
 Источник: C:\Users\user\Desktop\AirfoilStudio
 Файлов в папке "программа": 6
 index.html: 746 КБ, SHA256 31CCFA3A4116132134DF4EB922F0C7E737174CD1968CD491DED20168FECEDA66
